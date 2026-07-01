@@ -14,6 +14,7 @@ function Login({ loginForm, setLoginForm, handleLogin, setPage }) {
         >
           <option value="user">User</option>
           <option value="organizer">Organizer</option>
+         
         </select>
 
         <input
@@ -36,12 +37,24 @@ function Login({ loginForm, setLoginForm, handleLogin, setPage }) {
           required
         />
 
-        <button type="submit">Login</button>
+       <button type="submit">Login</button>
 
-        <small>
-          Don’t have an account?{" "}
-          <span onClick={() => setPage("register")}>Register here</span>
-        </small>
+<small>
+  Don’t have an account?{" "}
+  <span onClick={() => setPage("register")}>Register here</span>
+</small>
+
+<br />
+<br />
+
+<small>
+  <span
+    style={{ cursor: "pointer", color: "#6d28d9", fontWeight: "600" }}
+    onClick={() => setPage("admin-login")}
+  >
+    Admin Login
+  </span>
+</small>
       </form>
     </section>
   );

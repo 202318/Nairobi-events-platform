@@ -14,7 +14,7 @@ function Register({ registerForm, setRegisterForm, handleRegister, setPage }) {
         >
           <option value="user">User</option>
           <option value="organizer">Organizer</option>
-        </select>
+          </select>
 
         <input
           type="text"

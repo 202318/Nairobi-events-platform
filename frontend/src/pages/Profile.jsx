@@ -1,4 +1,4 @@
-function Profile({ loggedInUser, bookings }) {
+function Profile({ loggedInUser, bookings, deleteAccount, applyToBecomeOrganizer }) {
   if (!loggedInUser) {
     return (
       <div className="events-section">
@@ -7,49 +7,61 @@ function Profile({ loggedInUser, bookings }) {
     );
   }
 
-  const userBookings = bookings.filter(
-    (booking) => booking.userEmail === loggedInUser.email
-  );
-
-  const totalTickets = userBookings.reduce(
-    (sum, booking) => sum + booking.quantity,
+  const totalTickets = bookings.reduce(
+    (sum, booking) => sum + Number(booking.quantity || 0),
     0
   );
 
-  const totalSpent = userBookings.reduce(
-    (sum, booking) => sum + booking.totalAmount,
+  const totalSpent = bookings.reduce(
+    (sum, booking) =>
+      sum + Number(booking.totalAmount || booking.total_amount || 0),
     0
   );
 
   return (
-    <section className="events-section">
+    <section className="profile-page-clean">
+      <div className="profile-clean-card">
+        <div className="profile-title-row">
+          <span className="profile-purple-icon">👤</span>
+          <h1>{loggedInUser.name}</h1>
+        </div>
 
-      <h2>My Profile</h2>
-
-      <div className="details-card">
-
-        <h3>👤 {loggedInUser.name}</h3>
-
-        <p>
+        <p className="profile-info">
           <strong>Email:</strong> {loggedInUser.email}
         </p>
 
-        <hr />
-
-        <p>
-          <strong>Total Bookings:</strong> {userBookings.length}
+        <p className="profile-info">
+          <strong>Role:</strong> {loggedInUser.role}
         </p>
 
-        <p>
+        <hr className="profile-line" />
+
+        <p className="profile-stat">
+          <strong>Total Bookings:</strong> {bookings.length}
+        </p>
+
+        <p className="profile-stat">
           <strong>Total Tickets:</strong> {totalTickets}
         </p>
 
-        <p>
+        <p className="profile-stat">
           <strong>Total Amount Spent:</strong> KES {totalSpent}
         </p>
-
+        
+        {loggedInUser.role === "user" &&
+  loggedInUser.organizer_status !== "pending" && (
+    <button onClick={applyToBecomeOrganizer}>
+      Apply to Become Organizer
+    </button>
+)}
+        {loggedInUser.role !== "admin" && (
+          <div className="delete-box-clean">
+            <button className="delete-btn-clean" onClick={deleteAccount}>
+              Delete My Account
+            </button>
+          </div>
+        )}
       </div>
-
     </section>
   );
 }

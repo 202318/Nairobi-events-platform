@@ -4,7 +4,8 @@ const seedUsers = `
 INSERT INTO users (id, full_name, email, password, role)
 VALUES
 (1, 'Demo Organizer', 'organizer@test.com', '12345', 'organizer'),
-(2, 'Demo User', 'user@test.com', '12345', 'user')
+(2, 'Demo User', 'user@test.com', '12345', 'user'),
+(3, 'System Admin', 'admin@test.com', '12345', 'admin')
 ON DUPLICATE KEY UPDATE email = email;
 `;
 

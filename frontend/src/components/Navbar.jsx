@@ -4,6 +4,14 @@ function Navbar({ setPage, loggedInUser, handleLogout }) {
       <h2>Nairobi Events</h2>
 
       <div>
+        {!loggedInUser && (
+          <>
+            <button onClick={() => setPage("home")}>Home</button>
+            <button onClick={() => setPage("login")}>Login</button>
+            <button onClick={() => setPage("register")}>Register</button>
+          </>
+        )}
+
         {loggedInUser?.role === "user" && (
           <>
             <button onClick={() => setPage("home")}>Home</button>
@@ -21,11 +29,10 @@ function Navbar({ setPage, loggedInUser, handleLogout }) {
           </>
         )}
 
-        {!loggedInUser && (
+        {loggedInUser?.role === "admin" && (
           <>
-            <button onClick={() => setPage("home")}>Home</button>
-            <button onClick={() => setPage("login")}>Login</button>
-            <button onClick={() => setPage("register")}>Register</button>
+            <button onClick={() => setPage("admin")}>Admin Dashboard</button>
+            <button onClick={() => setPage("profile")}>Profile</button>
           </>
         )}
 
