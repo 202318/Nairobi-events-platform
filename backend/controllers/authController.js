@@ -92,10 +92,14 @@ function applyOrganizer(req, res) {
     }
 
     if (result.affectedRows === 0) {
-      return res.status(400).json({ message: "Only normal users can apply" });
+      return res.status(400).json({
+        message: "Only normal users can apply, or application already submitted",
+      });
     }
 
-    res.json({ message: "Organizer application submitted successfully" });
+    res.json({
+      message: "Organizer application submitted successfully. Please continue logging in as User until approval.",
+    });
   });
 }
 

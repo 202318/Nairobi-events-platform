@@ -425,7 +425,10 @@ async function deleteAccount() {
     setLoggedInUser(updatedUser);
     localStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
 
-    showMessage("Organizer application submitted successfully.", "success");
+   showMessage(
+  "Application submitted. Continue logging in as User until admin approval.",
+  "success"
+);
   } catch (error) {
     showMessage("Failed to submit organizer application.", "error");
   }
