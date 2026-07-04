@@ -1,3 +1,16 @@
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
 /* ---------- GENERAL ---------- */
 
 * {
@@ -15,13 +28,14 @@ body {
 /* ---------- NAVBAR ---------- */
 
 .navbar {
+  width: 100%;
   background: linear-gradient(90deg, #1e3a8a, #7c3aed);
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 18px 40px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 5px 20px rgba(0,0,0,.15);
 }
 
 .navbar h2 {
@@ -49,7 +63,6 @@ body {
   margin-left: 15px;
   font-weight: bold;
 }
-
 /* ---------- HERO ---------- */
 
 .hero {
