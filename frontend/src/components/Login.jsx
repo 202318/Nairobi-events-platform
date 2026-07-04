@@ -2,19 +2,8 @@ function Login({ loginForm, setLoginForm, handleLogin, setPage }) {
   return (
     <section className="login-page">
       <form className="login-card" onSubmit={handleLogin}>
-        <h2>Login</h2>
-        <p>Choose your account type and access your dashboard</p>
-
-        <select
-          value={loginForm.role}
-          onChange={(e) =>
-            setLoginForm({ ...loginForm, role: e.target.value })
-          }
-          required
-        >
-          <option value="user">User</option>
-          <option value="organizer">Organizer</option>
-        </select>
+        <h2><b>Login</b></h2>
+        <p>Enter your credentials to access your account</p>
 
         <input
           type="email"
@@ -38,10 +27,12 @@ function Login({ loginForm, setLoginForm, handleLogin, setPage }) {
 
         <button type="submit">Login</button>
 
-        <small>
+        <div>
+          <small>
           Don’t have an account?{" "}
           <span onClick={() => setPage("register")}>Register here</span>
         </small>
+        </div>
       </form>
     </section>
   );
