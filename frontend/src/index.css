@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap');
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -68,7 +69,7 @@ body {
 
 h1,
 h2 {
-  font-family: var(--heading);
+  font-family: Fraunces, system-ui, 'Segoe UI', Roboto, sans-serif;
   font-weight: 500;
   color: var(--text-h);
 }
@@ -87,12 +88,20 @@ h2 {
   line-height: 118%;
   letter-spacing: -0.24px;
   margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+  color: #08060d;
+  font-weight: 650;
+  font-family: Fraunces, system-ui, 'Segoe UI', Roboto, sans-serif
+}
+@media (max-width: 1024px) {
+  h2 {
+    font-size: 30px;
   }
 }
+
 p {
   margin: 0;
+  font-family: 'Times New Roman', Times, serif;
+  font-weight: 100;
 }
 
 code,

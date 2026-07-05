@@ -1,44 +1,59 @@
 function AdminLogin({ loginForm, setLoginForm, handleLogin, setPage }) {
   return (
-    <section className="login-page">
-      <form className="login-card" onSubmit={handleLogin}>
-        <h2>Admin Login</h2>
-        <p>Restricted access for system administrators</p>
+    <section className="auth-page">
+      <form className="auth-card" onSubmit={handleLogin}>
+        <div className="auth-logo" style={{ background: "linear-gradient(135deg, #dc2626, #7c3aed)" }}>
+          <div className="auth-logo-dots">
+            <div className="auth-logo-dot" />
+            <div className="auth-logo-dot" />
+            <div className="auth-logo-dot" />
+          </div>
+        </div>
 
-        <input
-          type="email"
-          placeholder="Admin email"
-          value={loginForm.email}
-          onChange={(e) =>
-            setLoginForm({
-              ...loginForm,
-              email: e.target.value,
-              role: "admin",
-            })
-          }
-          required
-        />
+        <span className="auth-admin-badge">🔐 Restricted Access</span>
+        <h2 className="auth-title">Admin Login</h2>
+        <p className="auth-subtitle">System administrators only</p>
 
-        <input
-          type="password"
-          placeholder="Admin password"
-          value={loginForm.password}
-          onChange={(e) =>
-            setLoginForm({
-              ...loginForm,
-              password: e.target.value,
-              role: "admin",
-            })
-          }
-          required
-        />
+        <div className="auth-form-group">
+          <label className="auth-label">Admin Email</label>
+          <input
+            className="auth-input"
+            type="email"
+            placeholder="admin@nairobievents.com"
+            value={loginForm.email}
+            onChange={(e) =>
+              setLoginForm({ ...loginForm, email: e.target.value, role: "admin" })
+            }
+            required
+          />
+        </div>
 
-        <button type="submit">Login as Admin</button>
+        <div className="auth-form-group">
+          <label className="auth-label">Admin Password</label>
+          <input
+            className="auth-input"
+            type="password"
+            placeholder="••••••••"
+            value={loginForm.password}
+            onChange={(e) =>
+              setLoginForm({ ...loginForm, password: e.target.value, role: "admin" })
+            }
+            required
+          />
+        </div>
 
-        <small>
-          Back to normal login?{" "}
-          <span onClick={() => setPage("login")}>User Login</span>
-        </small>
+        <button
+          type="submit"
+          className="auth-submit"
+          style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)" }}
+        >
+          Login as Admin
+        </button>
+
+        <p className="auth-footer">
+          Not an admin?{" "}
+          <span onClick={() => setPage("login")}>Back to user login</span>
+        </p>
       </form>
     </section>
   );
