@@ -8,7 +8,7 @@ function registerUser(req, res) {
   }
 
   const sql =
-    "INSERT INTO users (full_name, email, password, role, organizer_status) VALUES (?, ?, ?, 'user', 'none')";
+    "INSERT INTO users (full_name, email, password) VALUES (?, ?, ?);";
 
   db.query(sql, [full_name, email, password], (err, result) => {
     if (err) {
@@ -35,7 +35,7 @@ function loginUser(req, res) {
   }
 
   const sql =
-    "SELECT id, full_name, email, role, organizer_status FROM users WHERE email = ? AND password = ?";
+    "SELECT id, full_name, email FROM users WHERE email = ? AND password = ?";
 
   db.query(sql, [email, password], (err, results) => {
     if (err) {
