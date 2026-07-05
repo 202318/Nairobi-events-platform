@@ -1,22 +1,16 @@
 const db = require("../config/db");
 
 function registerUser(req, res) {
-  const { full_name, email, password, role } = req.body;
+  const { full_name, email, password } = req.body;
 
-  if (!full_name || !email || !password || !role) {
+  if (!full_name || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  if (role === "admin") {
-    return res.status(403).json({
-      message: "Admin accounts cannot be created from public registration",
-    });
-  }
-
   const sql =
-    "INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)";
+    "INSERT INTO users (full_name, email, password, role, organizer_status) VALUES (?, ?, ?, 'user', 'none')";
 
-  db.query(sql, [full_name, email, password, role], (err, result) => {
+  db.query(sql, [full_name, email, password], (err, result) => {
     if (err) {
       return res.status(500).json({
         message: "Registration failed. Email may already exist.",
@@ -32,16 +26,18 @@ function registerUser(req, res) {
 }
 
 function loginUser(req, res) {
-  const { email, password, role } = req.body;
+  const { email, password } = req.body;
 
-  if (!email || !password || !role) {
-    return res.status(400).json({ message: "Email, password and role are required" });
+  if (!email || !password) {
+    return res.status(400).json({
+      message: "Email and password are required",
+    });
   }
 
   const sql =
-    "SELECT id, full_name, email, role FROM users WHERE email = ? AND password = ? AND role = ?";
+    "SELECT id, full_name, email, role, organizer_status FROM users WHERE email = ? AND password = ?";
 
-  db.query(sql, [email, password, role], (err, results) => {
+  db.query(sql, [email, password], (err, results) => {
     if (err) {
       return res.status(500).json({ message: "Login failed", error: err });
     }
@@ -60,23 +56,43 @@ function loginUser(req, res) {
 function deleteUser(req, res) {
   const { id } = req.params;
 
-  const sql = "DELETE FROM users WHERE id = ? AND role != 'admin'";
+  const deleteBookingsSql = "DELETE FROM bookings WHERE user_id = ?";
+  const deleteApplicationsSql = "DELETE FROM organizer_applications WHERE user_id = ?";
+  const deleteUserSql = "DELETE FROM users WHERE id = ? AND role != 'admin'";
 
-  db.query(sql, [id], (err, result) => {
-    if (err) {
+  db.query(deleteBookingsSql, [id], (bookingErr) => {
+    if (bookingErr) {
       return res.status(500).json({
-        message: "Failed to delete account",
-        error: err,
+        message: "Failed to delete user bookings",
+        error: bookingErr,
       });
     }
 
-    if (result.affectedRows === 0) {
-      return res.status(403).json({
-        message: "Admin account cannot be deleted",
-      });
-    }
+    db.query(deleteApplicationsSql, [id], (applicationErr) => {
+      if (applicationErr) {
+        return res.status(500).json({
+          message: "Failed to delete organizer applications",
+          error: applicationErr,
+        });
+      }
 
-    res.json({ message: "Account deleted successfully" });
+      db.query(deleteUserSql, [id], (userErr, result) => {
+        if (userErr) {
+          return res.status(500).json({
+            message: "Failed to delete account",
+            error: userErr,
+          });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(403).json({
+            message: "Admin account cannot be deleted",
+          });
+        }
+
+        res.json({ message: "Account deleted successfully" });
+      });
+    });
   });
 }
 
@@ -84,21 +100,24 @@ function applyOrganizer(req, res) {
   const { id } = req.params;
 
   const sql =
-    "UPDATE users SET organizer_status = 'pending' WHERE id = ? AND role = 'user'";
+    "UPDATE users SET organizer_status = 'pending' WHERE id = ? AND role = 'user' AND organizer_status != 'pending'";
 
   db.query(sql, [id], (err, result) => {
     if (err) {
-      return res.status(500).json({ message: "Application failed", error: err });
+      return res.status(500).json({
+        message: "Application failed",
+        error: err,
+      });
     }
 
     if (result.affectedRows === 0) {
       return res.status(400).json({
-        message: "Only normal users can apply, or application already submitted",
+        message: "Application already submitted or user is not eligible",
       });
     }
 
     res.json({
-      message: "Organizer application submitted successfully. Please continue logging in as User until approval.",
+      message: "Organizer application submitted successfully.",
     });
   });
 }
@@ -107,17 +126,25 @@ function approveOrganizer(req, res) {
   const { id } = req.params;
 
   const sql =
-    "UPDATE users SET role = 'organizer', organizer_status = 'approved' WHERE id = ?";
+    "UPDATE users SET organizer_status = 'approved' WHERE id = ? AND role != 'admin'";
 
-  db.query(sql, [id], (err) => {
+  db.query(sql, [id], (err, result) => {
     if (err) {
-      return res.status(500).json({ message: "Approval failed", error: err });
+      return res.status(500).json({
+        message: "Approval failed",
+        error: err,
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(400).json({
+        message: "Organizer approval failed",
+      });
     }
 
     res.json({ message: "Organizer approved successfully" });
   });
 }
-
 module.exports = {
   registerUser,
   loginUser,

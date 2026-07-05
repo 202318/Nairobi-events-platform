@@ -38,7 +38,54 @@ function getPendingOrganizers(req, res) {
   });
 }
 
+function getAllUsers(req, res) {
+  const sql = `
+    SELECT id, full_name, email, role, organizer_status, created_at
+    FROM users
+    ORDER BY id DESC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      return res.status(500).json({
+        message: "Failed to fetch users",
+        error: err,
+      });
+    }
+
+    res.json(results);
+  });
+}
+
+function deleteUserByAdmin(req, res) {
+  const { id } = req.params;
+
+  const sql = `
+    DELETE FROM users
+    WHERE id = ? AND role != 'admin'
+  `;
+
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      return res.status(500).json({
+        message: "Failed to delete user",
+        error: err,
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(403).json({
+        message: "Admin accounts cannot be deleted",
+      });
+    }
+
+    res.json({ message: "User deleted successfully" });
+  });
+}
+
 module.exports = {
   getDashboardStats,
   getPendingOrganizers,
+  getAllUsers,
+  deleteUserByAdmin,
 };

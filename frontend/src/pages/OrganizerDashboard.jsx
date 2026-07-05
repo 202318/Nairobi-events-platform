@@ -55,15 +55,20 @@ function OrganizerDashboard({
         />
 
         <select
-          value={activeEvent.category}
-          onChange={(e) => updateField("category", e.target.value)}
-        >
-          <option>Technology</option>
-          <option>Music</option>
-          <option>Sports</option>
-          <option>Business</option>
-          <option>Education</option>
-        </select>
+  value={activeEvent.category}
+  onChange={(e) => updateField("category", e.target.value)}
+>
+  <option value="Technology">Technology</option>
+  <option value="Business">Business</option>
+  <option value="Education">Education</option>
+  <option value="Music">Music</option>
+  <option value="Sports">Sports</option>
+  <option value="Art">Art</option>
+  <option value="Culture">Culture</option>
+  <option value="Food & Drink">Food & Drink</option>
+  <option value="Fashion">Fashion</option>
+  <option value="Community & Charity">Community & Charity</option>
+</select>
 
         <textarea
           placeholder="Event description"

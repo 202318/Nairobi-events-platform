@@ -10,11 +10,11 @@ function AdminDashboard() {
     totalRevenue: 0,
   });
 
-  const [pendingOrganizers, setPendingOrganizers] = useState([]);
+  const [pendingApplications, setPendingApplications] = useState([]);
 
   useEffect(() => {
     fetchAdminStats();
-    fetchPendingOrganizers();
+    fetchPendingApplications();
   }, []);
 
   async function fetchAdminStats() {
@@ -26,25 +26,25 @@ function AdminDashboard() {
     }
   }
 
-  async function fetchPendingOrganizers() {
+  async function fetchPendingApplications() {
     try {
-      const response = await API.get("/admin/pending-organizers");
-      setPendingOrganizers(response.data);
+      const response = await API.get("/organizer/pending");
+      setPendingApplications(response.data);
     } catch (error) {
-      console.log("Failed to load pending organizers", error);
+      console.log("Failed to load organizer applications", error);
     }
   }
 
-  async function approveOrganizer(userId) {
+  async function approveApplication(applicationId) {
     try {
-      await API.put(`/auth/approve-organizer/${userId}`);
+      await API.put(`/organizer/approve/${applicationId}`);
 
       await fetchAdminStats();
-      await fetchPendingOrganizers();
+      await fetchPendingApplications();
 
-      alert("Organizer approved successfully.");
+      alert("Organizer application approved successfully.");
     } catch (error) {
-      alert("Failed to approve organizer.");
+      alert("Failed to approve organizer application.");
     }
   }
 
@@ -81,22 +81,73 @@ function AdminDashboard() {
 
       <h2>Pending Organizer Applications</h2>
 
-      {pendingOrganizers.length === 0 ? (
+      {pendingApplications.length === 0 ? (
         <p>No pending organizer applications.</p>
       ) : (
         <div className="event-grid">
-          {pendingOrganizers.map((user) => (
-            <div className="event-card" key={user.id}>
-              <h3>{user.full_name}</h3>
+          {pendingApplications.map((application) => (
+            <div className="event-card" key={application.id}>
+              <h3>{application.organizer_name}</h3>
+
               <p>
-                <strong>Email:</strong> {user.email}
-              </p>
-              <p>
-                <strong>Status:</strong> {user.organizer_status}
+                <strong>Applicant:</strong> {application.full_name}
               </p>
 
-              <button onClick={() => approveOrganizer(user.id)}>
-                Approve Organizer
+              <p>
+                <strong>Email:</strong> {application.email}
+              </p>
+
+              <p>
+                <strong>Event Name:</strong> {application.event_title}
+              </p>
+
+              <p>
+                <strong>Category:</strong> {application.event_category}
+              </p>
+
+              <p>
+                <strong>Description:</strong> {application.event_description}
+              </p>
+
+              <p>
+                <strong>Sponsors:</strong> {application.sponsors || "None"}
+              </p>
+
+              <p>
+                <strong>Target Audience:</strong>{" "}
+                {application.target_audience || "Not specified"}
+              </p>
+
+              <p>
+                <strong>Expected Attendance:</strong>{" "}
+                {application.expected_attendance || "Not specified"}
+              </p>
+
+              <p>
+                <strong>Proposed Date:</strong>{" "}
+                {application.proposed_date
+                  ? new Date(application.proposed_date).toLocaleDateString(
+                      "en-GB",
+                      {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      }
+                    )
+                  : "Not specified"}
+              </p>
+
+              <p>
+                <strong>Location:</strong> {application.location}
+              </p>
+
+              <p>
+                <strong>Expected Price:</strong> KES{" "}
+                {application.expected_price}
+              </p>
+
+              <button onClick={() => approveApplication(application.id)}>
+                Approve Application
               </button>
             </div>
           ))}

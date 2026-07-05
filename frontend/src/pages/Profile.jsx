@@ -1,4 +1,9 @@
-function Profile({ loggedInUser, bookings, deleteAccount, applyToBecomeOrganizer }) {
+function Profile({
+  loggedInUser,
+  bookings,
+  deleteAccount,
+  setPage,
+}) {
   if (!loggedInUser) {
     return (
       <div className="events-section">
@@ -31,7 +36,12 @@ function Profile({ loggedInUser, bookings, deleteAccount, applyToBecomeOrganizer
         </p>
 
         <p className="profile-info">
-          <strong>Role:</strong> {loggedInUser.role}
+          <strong>Status:</strong>{" "}
+          {loggedInUser.organizer_status === "approved"
+            ? "Approved Organizer"
+            : loggedInUser.organizer_status === "pending"
+            ? "Organizer Application Pending"
+            : "Normal User"}
         </p>
 
         <hr className="profile-line" />
@@ -47,13 +57,25 @@ function Profile({ loggedInUser, bookings, deleteAccount, applyToBecomeOrganizer
         <p className="profile-stat">
           <strong>Total Amount Spent:</strong> KES {totalSpent}
         </p>
-        
-        {loggedInUser.role === "user" &&
-  loggedInUser.organizer_status !== "pending" && (
-    <button onClick={applyToBecomeOrganizer}>
-      Apply to Become Organizer
-    </button>
-)}
+
+        {loggedInUser.organizer_status === "none" && (
+          <button onClick={() => setPage("organizer-application")}>
+            Apply to Become Organizer
+          </button>
+        )}
+
+        {loggedInUser.organizer_status === "pending" && (
+          <p className="profile-info">
+            Your organizer application is awaiting admin approval.
+          </p>
+        )}
+
+        {loggedInUser.organizer_status === "approved" && (
+          <button onClick={() => setPage("organizer")}>
+            Go to Organizer Dashboard
+          </button>
+        )}
+
         {loggedInUser.role !== "admin" && (
           <div className="delete-box-clean">
             <button className="delete-btn-clean" onClick={deleteAccount}>

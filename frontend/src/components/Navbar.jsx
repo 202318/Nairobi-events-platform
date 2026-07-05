@@ -12,19 +12,17 @@ function Navbar({ setPage, loggedInUser, handleLogout }) {
           </>
         )}
 
-        {loggedInUser?.role === "user" && (
+        {loggedInUser && loggedInUser.role !== "admin" && (
           <>
             <button onClick={() => setPage("home")}>Home</button>
             <button onClick={() => setPage("bookings")}>My Bookings</button>
-            <button onClick={() => setPage("profile")}>Profile</button>
-          </>
-        )}
 
-        {loggedInUser?.role === "organizer" && (
-          <>
-            <button onClick={() => setPage("organizer")}>
-              Organizer Dashboard
-            </button>
+            {loggedInUser.organizer_status === "approved" && (
+              <button onClick={() => setPage("organizer")}>
+                Organizer Dashboard
+              </button>
+            )}
+
             <button onClick={() => setPage("profile")}>Profile</button>
           </>
         )}
@@ -38,9 +36,7 @@ function Navbar({ setPage, loggedInUser, handleLogout }) {
 
         {loggedInUser && (
           <>
-            <span className="welcome-text">
-              Hi, {loggedInUser.name} ({loggedInUser.role})
-            </span>
+            <span className="welcome-text">Hi, {loggedInUser.name}</span>
             <button onClick={handleLogout}>Logout</button>
           </>
         )}

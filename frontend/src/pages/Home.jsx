@@ -11,6 +11,20 @@ function Home({
   filteredEvents,
   openEventDetails,
 }) {
+  const categories = [
+    "All",
+    "Technology",
+    "Business",
+    "Education",
+    "Music",
+    "Sports",
+    "Art",
+    "Culture",
+    "Food & Drink",
+    "Fashion",
+    "Community & Charity",
+  ];
+
   return (
     <>
       <section className="hero">
@@ -33,7 +47,7 @@ function Home({
         </div>
 
         <div className="category-buttons">
-          {["All", "Technology", "Music", "Sports"].map((category) => (
+          {categories.map((category) => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}

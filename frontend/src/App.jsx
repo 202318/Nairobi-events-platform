@@ -14,15 +14,20 @@ import Bookings from "./pages/Bookings";
 import Profile from "./pages/Profile";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import OrganizerApplication from "./pages/OrganizerApplication";
 
 function App() {
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState(
+    window.location.pathname === "/admin-login" ? "admin-login" : "home"
+  );
+
   const [events, setEvents] = useState([]);
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [bookings, setBookings] = useState([]);
+  const [editEvent, setEditEvent] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
     name: "",
@@ -33,77 +38,96 @@ function App() {
     description: "",
   });
 
+  const [organizerApplication, setOrganizerApplication] = useState({
+    organizer_name: "",
+    event_title: "",
+    event_category: "",
+    event_description: "",
+    sponsors: "",
+    target_audience: "",
+    expected_attendance: "",
+    proposed_date: "",
+    location: "",
+    expected_price: "",
+  });
+
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [message, setMessage] = useState({ text: "", type: "" });
-  
+
   const [registerForm, setRegisterForm] = useState({
     name: "",
     email: "",
     password: "",
-    role: "user",
   });
 
   const [loginForm, setLoginForm] = useState({
     email: "",
     password: "",
-    role: "user",
   });
 
-  const [editEvent, setEditEvent] = useState(null);
+  useEffect(() => {
+    const isAdminLoginPage = window.location.pathname === "/admin-login";
+
+    if (isAdminLoginPage) {
+      setPage("admin-login");
+      fetchEvents();
+      return;
+    }
+
+    const savedUser = localStorage.getItem("loggedInUser");
+
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setLoggedInUser(user);
+
+      if (user.role === "admin") {
+        setPage("admin");
+      } else {
+        fetchUserBookings(user.id);
+        setPage("home");
+      }
+    }
+
+    fetchEvents();
+  }, []);
 
   useEffect(() => {
-  const savedUser = localStorage.getItem("loggedInUser");
+    if (!loggedInUser) return;
 
-  if (savedUser) {
-    const user = JSON.parse(savedUser);
-    setLoggedInUser(user);
+    let logoutTimer;
 
-    if (user.role === "organizer") {
-      fetchOrganizerEvents(user.id);
-      setPage("organizer");
-    } else if (user.role === "admin") {
-      setPage("admin");
-    } else {
-      fetchUserBookings(user.id);
-      setPage("home");
+    function resetTimer() {
+      clearTimeout(logoutTimer);
+
+      logoutTimer = setTimeout(() => {
+        localStorage.removeItem("loggedInUser");
+        setLoggedInUser(null);
+        setBookings([]);
+        setPage("home");
+        showMessage("You were logged out due to inactivity.", "warning");
+      }, 15 * 60 * 1000);
     }
+
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+    window.addEventListener("click", resetTimer);
+
+    resetTimer();
+
+    return () => {
+      clearTimeout(logoutTimer);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      window.removeEventListener("click", resetTimer);
+    };
+  }, [loggedInUser]);
+
+  function showMessage(text, type = "success") {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: "", type: "" }), 3000);
   }
-
-  fetchEvents();
-}, []);
-
-useEffect(() => {
-  if (!loggedInUser) return;
-
-  let logoutTimer;
-
-  function resetTimer() {
-    clearTimeout(logoutTimer);
-
-    logoutTimer = setTimeout(() => {
-      localStorage.removeItem("loggedInUser");
-      setLoggedInUser(null);
-      setBookings([]);
-      setPage("home");
-      showMessage("You were logged out due to inactivity.", "warning");
-    }, 15 * 60 * 1000);
-  }
-
-  window.addEventListener("mousemove", resetTimer);
-  window.addEventListener("keydown", resetTimer);
-  window.addEventListener("click", resetTimer);
-
-  resetTimer();
-
-  return () => {
-    clearTimeout(logoutTimer);
-    window.removeEventListener("mousemove", resetTimer);
-    window.removeEventListener("keydown", resetTimer);
-    window.removeEventListener("click", resetTimer);
-  };
-}, [loggedInUser]);
 
   async function fetchEvents() {
     try {
@@ -114,9 +138,22 @@ useEffect(() => {
     }
   }
 
-  function showMessage(text, type = "success") {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+  async function fetchUserBookings(userId) {
+    try {
+      const response = await API.get(`/bookings/user/${userId}`);
+      setBookings(response.data);
+    } catch (error) {
+      showMessage("Failed to load bookings.", "error");
+    }
+  }
+
+  async function fetchOrganizerEvents(organizerId) {
+    try {
+      const response = await API.get(`/events/organizer/${organizerId}`);
+      setOrganizerEvents(response.data);
+    } catch (error) {
+      showMessage("Failed to load organizer events.", "error");
+    }
   }
 
   const filteredEvents = events.filter((event) => {
@@ -158,20 +195,19 @@ useEffect(() => {
         full_name: registerForm.name,
         email: registerForm.email,
         password: registerForm.password,
-        role: registerForm.role,
       });
 
       setRegisterForm({
         name: "",
         email: "",
         password: "",
-        role: "user",
       });
 
       setPage("login");
       showMessage("Account created successfully. You can now log in.", "success");
     } catch (error) {
-      showMessage("Registration failed. Email may already exist.", "error");
+      console.log("REGISTER ERROR:", error.response?.data || error.message);
+      showMessage(error.response?.data?.message || "Registration failed.", "error");
     }
   }
 
@@ -182,7 +218,6 @@ useEffect(() => {
       const response = await API.post("/auth/login", {
         email: loginForm.email,
         password: loginForm.password,
-        role: loginForm.role,
       });
 
       const user = response.data.user;
@@ -192,6 +227,7 @@ useEffect(() => {
         name: user.full_name,
         email: user.email,
         role: user.role,
+        organizer_status: user.organizer_status,
       };
 
       setLoggedInUser(loggedUser);
@@ -200,22 +236,18 @@ useEffect(() => {
       setLoginForm({
         email: "",
         password: "",
-        role: "user",
       });
 
-     if (loggedUser.role === "organizer") {
-  await fetchOrganizerEvents(loggedUser.id);
-  setPage("organizer");
-} else if (loggedUser.role === "admin") {
-  setPage("admin");
-} else {
-  setPage("home");
-  fetchUserBookings(loggedUser.id);
-}
+      if (loggedUser.role === "admin") {
+        setPage("admin");
+      } else {
+        setPage("home");
+        fetchUserBookings(loggedUser.id);
+      }
 
       showMessage(`Welcome, ${loggedUser.name}. Login successful.`, "success");
     } catch (error) {
-      showMessage("Invalid email, password, or role.", "error");
+      showMessage("Invalid email or password.", "error");
     }
   }
 
@@ -259,15 +291,6 @@ useEffect(() => {
     }
   }
 
-  async function fetchUserBookings(userId) {
-    try {
-      const response = await API.get(`/bookings/user/${userId}`);
-      setBookings(response.data);
-    } catch (error) {
-      showMessage("Failed to load bookings.", "error");
-    }
-  }
-
   async function removeBooking(bookingId) {
     try {
       await API.delete(`/bookings/${bookingId}`);
@@ -279,8 +302,8 @@ useEffect(() => {
   }
 
   async function addOrganizerEvent() {
-    if (!loggedInUser || loggedInUser.role !== "organizer") {
-      showMessage("Only organizers can add events.", "warning");
+    if (!loggedInUser || loggedInUser.organizer_status !== "approved") {
+      showMessage("Only approved organizers can add events.", "warning");
       return;
     }
 
@@ -290,12 +313,17 @@ useEffect(() => {
     }
 
     const categoryMap = {
-      Technology: 1,
-      Music: 2,
-      Sports: 3,
-      Business: 4,
-      Education: 5,
-    };
+  Technology: 1,
+  Business: 2,
+  Education: 3,
+  Music: 4,
+  Sports: 5,
+  Art: 6,
+  Culture: 7,
+  "Food & Drink" : 8,
+  Fashion: 9,
+  "Community & Charity" : 10,
+};
 
     try {
       await API.post("/events", {
@@ -310,18 +338,6 @@ useEffect(() => {
         organizer_id: loggedInUser.id,
       });
 
-      const createdEvent = {
-        id: Date.now(),
-        name: newEvent.name,
-        date: newEvent.date,
-        location: newEvent.location,
-        price: newEvent.price,
-        category: newEvent.category,
-        description: newEvent.description,
-      };
-
-      setOrganizerEvents([...organizerEvents, createdEvent]);
-
       setNewEvent({
         name: "",
         date: "",
@@ -332,107 +348,122 @@ useEffect(() => {
       });
 
       await fetchEvents();
+      await fetchOrganizerEvents(loggedInUser.id);
+
       showMessage("Event added successfully.", "success");
     } catch (error) {
       showMessage("Failed to add event.", "error");
     }
-     await fetchOrganizerEvents(loggedInUser.id);
   }
 
   async function deleteOrganizerEvent(id) {
     try {
       await API.delete(`/events/${id}`);
-      setOrganizerEvents(organizerEvents.filter((event) => event.id !== id));
       await fetchEvents();
+      await fetchOrganizerEvents(loggedInUser.id);
       showMessage("Event deleted successfully.", "info");
     } catch (error) {
       showMessage("Failed to delete event.", "error");
     }
-    await fetchOrganizerEvents(loggedInUser.id);
   }
 
-  async function fetchOrganizerEvents(organizerId) {
-  try {
-    const response = await API.get(`/events/organizer/${organizerId}`);
-    setOrganizerEvents(response.data);
-  } catch (error) {
-    showMessage("Failed to load organizer events.", "error");
+  async function updateOrganizerEvent() {
+   const categoryMap = {
+  Technology: 1,
+  Business: 2,
+  Education: 3,
+  Music: 4,
+  Sports: 5,
+  Art: 6,
+  Culture: 7,
+  "Food & Drink": 8,
+  Fashion: 9,
+  "Community & Charity": 10,
+};
+    try {
+      await API.put(`/events/${editEvent.id}`, {
+        title: editEvent.name,
+        description: editEvent.description,
+        event_date: editEvent.date,
+        location: editEvent.location,
+        price: Number(editEvent.price),
+        category_id: categoryMap[editEvent.category],
+      });
+
+      setEditEvent(null);
+      await fetchEvents();
+      await fetchOrganizerEvents(loggedInUser.id);
+
+      showMessage("Event updated successfully.", "success");
+    } catch (error) {
+      showMessage("Failed to update event.", "error");
+    }
   }
-}
 
-async function updateOrganizerEvent() {
-  const categoryMap = {
-    Technology: 1,
-    Music: 2,
-    Sports: 3,
-    Business: 4,
-    Education: 5,
-  };
+  async function deleteAccount() {
+    if (!loggedInUser) return;
 
-  try {
-    await API.put(`/events/${editEvent.id}`, {
-      title: editEvent.name,
-      description: editEvent.description,
-      event_date: editEvent.date,
-      location: editEvent.location,
-      price: Number(editEvent.price),
-      category_id: categoryMap[editEvent.category],
-    });
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete your account? This cannot be undone."
+    );
 
-    setEditEvent(null);
-    await fetchEvents();
-    await fetchOrganizerEvents(loggedInUser.id);
+    if (!confirmDelete) return;
 
-    showMessage("Event updated successfully.", "success");
-  } catch (error) {
-    showMessage("Failed to update event.", "error");
+    try {
+      await API.delete(`/auth/user/${loggedInUser.id}`);
+
+      localStorage.removeItem("loggedInUser");
+      setLoggedInUser(null);
+      setBookings([]);
+      setPage("home");
+
+      showMessage("Account deleted successfully.", "success");
+    } catch (error) {
+      showMessage("Failed to delete account.", "error");
+    }
   }
-}
-async function deleteAccount() {
-  if (!loggedInUser) return;
 
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete your account? This cannot be undone."
-  );
+  async function submitOrganizerApplication() {
+    if (!loggedInUser) {
+      setPage("login");
+      showMessage("Please login first.", "warning");
+      return;
+    }
 
-  if (!confirmDelete) return;
+    try {
+      await API.post("/organizer/apply", {
+        user_id: loggedInUser.id,
+        ...organizerApplication,
+      });
 
-  try {
-    await API.delete(`/auth/user/${loggedInUser.id}`);
+      const updatedUser = {
+        ...loggedInUser,
+        organizer_status: "pending",
+      };
 
-    localStorage.removeItem("loggedInUser");
-    setLoggedInUser(null);
-    setBookings([]);
-    setPage("home");
+      setLoggedInUser(updatedUser);
+      localStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
 
-    showMessage("Account deleted successfully.", "success");
-  } catch (error) {
-    showMessage("Failed to delete account.", "error");
+      setOrganizerApplication({
+        organizer_name: "",
+        event_title: "",
+        event_category: "",
+        event_description: "",
+        sponsors: "",
+        target_audience: "",
+        expected_attendance: "",
+        proposed_date: "",
+        location: "",
+        expected_price: "",
+      });
+
+      setPage("profile");
+      showMessage("Organizer application submitted successfully.", "success");
+    } catch (error) {
+      showMessage("Failed to submit organizer application.", "error");
+    }
   }
-}
 
-    async function applyToBecomeOrganizer() {
-  if (!loggedInUser) return;
-
-  try {
-    await API.put(`/auth/apply-organizer/${loggedInUser.id}`);
-
-    const updatedUser = {
-      ...loggedInUser,
-      organizer_status: "pending",
-    };
-
-    setLoggedInUser(updatedUser);
-    localStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
-
-   showMessage(
-  "Application submitted. Continue logging in as User until admin approval.",
-  "success"
-);
-  } catch (error) {
-    showMessage("Failed to submit organizer application.", "error");
-  }
-}
   return (
     <div>
       <Toast message={message} setMessage={setMessage} />
@@ -475,26 +506,26 @@ async function deleteAccount() {
         />
       )}
 
-       {page === "organizer" && (
-  <OrganizerDashboard
-    organizerEvents={organizerEvents}
-    newEvent={newEvent}
-    setNewEvent={setNewEvent}
-    addOrganizerEvent={addOrganizerEvent}
-    deleteOrganizerEvent={deleteOrganizerEvent}
+      {page === "organizer" && (
+        <OrganizerDashboard
+          organizerEvents={organizerEvents}
+          newEvent={newEvent}
+          setNewEvent={setNewEvent}
+          addOrganizerEvent={addOrganizerEvent}
+          deleteOrganizerEvent={deleteOrganizerEvent}
+          editEvent={editEvent}
+          setEditEvent={setEditEvent}
+          updateOrganizerEvent={updateOrganizerEvent}
+        />
+      )}
 
-    editEvent={editEvent}
-    setEditEvent={setEditEvent}
-    updateOrganizerEvent={updateOrganizerEvent}
-  />
-)}
       {page === "profile" && (
         <Profile
-  loggedInUser={loggedInUser}
-  bookings={bookings}
-  deleteAccount={deleteAccount}
-   applyToBecomeOrganizer={applyToBecomeOrganizer}
-/>
+          loggedInUser={loggedInUser}
+          bookings={bookings}
+          deleteAccount={deleteAccount}
+          setPage={setPage}
+        />
       )}
 
       {page === "login" && (
@@ -516,20 +547,24 @@ async function deleteAccount() {
       )}
 
       {page === "admin-login" && (
-  <AdminLogin
-    loginForm={loginForm}
-    setLoginForm={setLoginForm}
-    handleLogin={handleLogin}
-    setPage={setPage}
-  />
-)}
+        <AdminLogin
+          loginForm={loginForm}
+          setLoginForm={setLoginForm}
+          handleLogin={handleLogin}
+          setPage={setPage}
+        />
+      )}
 
-      {page === "admin" && (
-  <AdminDashboard
-    events={events}
-    bookings={bookings}
-  />
-)}
+      {page === "admin" && <AdminDashboard events={events} bookings={bookings} />}
+
+      {page === "organizer-application" && (
+        <OrganizerApplication
+          organizerApplication={organizerApplication}
+          setOrganizerApplication={setOrganizerApplication}
+          submitOrganizerApplication={submitOrganizerApplication}
+          setPage={setPage}
+        />
+      )}
     </div>
   );
 }
