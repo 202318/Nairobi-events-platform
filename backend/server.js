@@ -1,5 +1,4 @@
 require("dotenv").config();
-console.log("MPESA KEY:", process.env.MPESA_CONSUMER_KEY);
 const express = require("express");
 const cors = require("cors");
 const mpesa = require("./routes/mpesa");
