@@ -610,3 +610,15 @@ width:90%;
     flex-direction: column;
   }
 }
+.admin-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 35px;
+  flex-wrap: wrap;
+}
+
+.admin-tabs button {
+  border-radius: 25px;
+  padding: 12px 20px;
+}

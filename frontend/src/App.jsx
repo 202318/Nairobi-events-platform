@@ -211,54 +211,71 @@ function App() {
     }
   }
 
-  async function handleLogin(e) {
-    e.preventDefault();
+ async function handleLogin(e) {
+  e.preventDefault();
 
-    try {
-      const response = await API.post("/auth/login", {
-        email: loginForm.email,
-        password: loginForm.password,
-      });
+  try {
+    const response = await API.post("/auth/login", {
+      email: loginForm.email,
+      password: loginForm.password,
+    });
 
-      const user = response.data.user;
+    const user = response.data.user;
 
-      const loggedUser = {
-        id: user.id,
-        name: user.full_name,
-        email: user.email,
-        role: user.role,
-        organizer_status: user.organizer_status,
-      };
+    const loggedUser = {
+      id: user.id,
+      name: user.full_name,
+      email: user.email,
+      role: user.role,
+      organizer_status: user.organizer_status,
+    };
 
-      setLoggedInUser(loggedUser);
-      localStorage.setItem("loggedInUser", JSON.stringify(loggedUser));
+    const isAdminLoginPage = window.location.pathname === "/admin-login";
 
-      setLoginForm({
-        email: "",
-        password: "",
-      });
-
-      if (loggedUser.role === "admin") {
-        setPage("admin");
-      } else {
-        setPage("home");
-        fetchUserBookings(loggedUser.id);
-      }
-
-      showMessage(`Welcome, ${loggedUser.name}. Login successful.`, "success");
-    } catch (error) {
-      showMessage("Invalid email or password.", "error");
+    if (isAdminLoginPage && loggedUser.role !== "admin") {
+      showMessage("Only admin can login from this page.", "error");
+      return;
     }
+
+    if (!isAdminLoginPage && loggedUser.role === "admin") {
+      showMessage("Please use the admin login URL.", "warning");
+      return;
+    }
+
+    setLoggedInUser(loggedUser);
+    localStorage.setItem("loggedInUser", JSON.stringify(loggedUser));
+
+    setLoginForm({
+      email: "",
+      password: "",
+    });
+
+    if (loggedUser.role === "admin") {
+      setPage("admin");
+    } else {
+      setPage("home");
+      fetchUserBookings(loggedUser.id);
+    }
+
+    showMessage(`Welcome, ${loggedUser.name}. Login successful.`, "success");
+  } catch (error) {
+    showMessage("Invalid email or password.", "error");
+  }
+}
+ function handleLogout() {
+  setLoggedInUser(null);
+  localStorage.removeItem("loggedInUser");
+  setSelectedEvent(null);
+  setBookings([]);
+
+  if (window.location.pathname === "/admin-login") {
+    setPage("admin-login");
+  } else {
+    setPage("home");
   }
 
-  function handleLogout() {
-    setLoggedInUser(null);
-    localStorage.removeItem("loggedInUser");
-    setSelectedEvent(null);
-    setBookings([]);
-    setPage("home");
-    showMessage("You have logged out successfully.", "info");
-  }
+  showMessage("You have logged out successfully.", "info");
+}
 
   function openEventDetails(event) {
     setSelectedEvent(event);
