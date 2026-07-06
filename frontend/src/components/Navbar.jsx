@@ -1,9 +1,18 @@
 function Navbar({ setPage, loggedInUser, handleLogout }) {
   return (
     <nav className="navbar">
-      <h2>Nairobi Events</h2>
+      <div className="navbar-brand" onClick={() => setPage("home")}>
+        <div className="navbar-logo">
+          <div className="navbar-logo-dots">
+            <div className="navbar-logo-dot" />
+            <div className="navbar-logo-dot" />
+            <div className="navbar-logo-dot" />
+          </div>
+        </div>
+        <h2>Nairobi Events</h2>
+      </div>
 
-      <div>
+      <div className="navbar-links">
         {!loggedInUser && (
           <>
             <button onClick={() => setPage("home")}>Home</button>
@@ -16,20 +25,16 @@ function Navbar({ setPage, loggedInUser, handleLogout }) {
           <>
             <button onClick={() => setPage("home")}>Home</button>
             <button onClick={() => setPage("bookings")}>My Bookings</button>
-
             {loggedInUser.organizer_status === "approved" && (
-              <button onClick={() => setPage("organizer")}>
-                Organizer Dashboard
-              </button>
+              <button onClick={() => setPage("organizer")}>Dashboard</button>
             )}
-
             <button onClick={() => setPage("profile")}>Profile</button>
           </>
         )}
 
         {loggedInUser?.role === "admin" && (
           <>
-            <button onClick={() => setPage("admin")}>Admin Dashboard</button>
+            <button onClick={() => setPage("admin")}>Admin</button>
             <button onClick={() => setPage("profile")}>Profile</button>
           </>
         )}
@@ -37,7 +42,9 @@ function Navbar({ setPage, loggedInUser, handleLogout }) {
         {loggedInUser && (
           <>
             <span className="welcome-text">Hi, {loggedInUser.name}</span>
-            <button onClick={handleLogout}>Logout</button>
+            <button className="navbar-logout" onClick={handleLogout}>
+              Logout
+            </button>
           </>
         )}
       </div>

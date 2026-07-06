@@ -90,14 +90,7 @@ function setPage(newPage) {
   });
 
   useEffect(() => {
-    const isAdminLoginPage = window.location.pathname === "/admin-login";
-
-    if (isAdminLoginPage) {
-      setPage("admin-login");
-      fetchEvents();
-      return;
-    }
-
+   
     const savedUser = localStorage.getItem("loggedInUser");
 
     if (savedUser) {

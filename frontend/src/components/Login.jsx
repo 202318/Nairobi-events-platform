@@ -1,36 +1,54 @@
 function Login({ loginForm, setLoginForm, handleLogin, setPage }) {
   return (
-    <section className="login-page">
-      <form className="login-card" onSubmit={handleLogin}>
-        <h2>Login</h2>
-        <p>Access your Nairobi Events account</p>
+    <section className="auth-page">
+      <form className="auth-card" onSubmit={handleLogin}>
+        <div className="auth-logo">
+          <div className="auth-logo-dots">
+            <div className="auth-logo-dot" />
+            <div className="auth-logo-dot" />
+            <div className="auth-logo-dot" />
+          </div>
+        </div>
 
-        <input
-          type="email"
-          placeholder="Email address"
-          value={loginForm.email}
-          onChange={(e) =>
-            setLoginForm({ ...loginForm, email: e.target.value })
-          }
-          required
-        />
+        <span className="auth-eyebrow">Welcome back</span>
+        <h2 className="auth-title">Log in</h2>
+        <p className="auth-subtitle">Access your Nairobi Events account</p>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={loginForm.password}
-          onChange={(e) =>
-            setLoginForm({ ...loginForm, password: e.target.value })
-          }
-          required
-        />
+        <div className="auth-form-group">
+          <label className="auth-label">Email address</label>
+          <input
+            className="auth-input"
+            type="email"
+            placeholder="you@example.com"
+            value={loginForm.email}
+            onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+            required
+          />
+        </div>
 
-        <button type="submit">Login</button>
+        <div className="auth-form-group">
+          <label className="auth-label">Password</label>
+          <input
+            className="auth-input"
+            type="password"
+            placeholder="••••••••"
+            value={loginForm.password}
+            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+            required
+          />
+        </div>
 
-        <small>
-          Don’t have an account?{" "}
+        <button type="submit" className="auth-submit">Login</button>
+
+        <p className="auth-footer">
+          Don't have an account?{" "}
           <span onClick={() => setPage("register")}>Register here</span>
-        </small>
+        </p>
+
+        <p className="auth-footer" style={{ marginTop: 6 }}>
+          Admin?{" "}
+          <span onClick={() => setPage("admin-login")}>Admin login</span>
+        </p>
       </form>
     </section>
   );
