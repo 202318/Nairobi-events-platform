@@ -1,13 +1,11 @@
 const mysql = require("mysql2");
-const dotenv = require("dotenv");
-dotenv.config();
 
 const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
+  host: "localhost",
+  user: "root",
+  password: "0000",
+  database: "nairobi_events",
+  port: 3307,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

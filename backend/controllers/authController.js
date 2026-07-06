@@ -9,12 +9,7 @@ function registerUser(req, res) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-<<<<<<< HEAD
   const verificationToken = crypto.randomBytes(32).toString("hex");
-=======
-  const sql =
-    "INSERT INTO users (full_name, email, password) VALUES (?, ?, ?);";
->>>>>>> 7e460aca0e23799e05b7146b57ec6aeac2ee6e6c
 
   const sql = `
     INSERT INTO users 
@@ -141,16 +136,11 @@ function loginUser(req, res) {
     return res.status(400).json({ message: "Email and password are required" });
   }
 
-<<<<<<< HEAD
   const sql = `
     SELECT id, full_name, email, role, organizer_status, is_verified
     FROM users
     WHERE email = ? AND password = ?
   `;
-=======
-  const sql =
-    "SELECT id, full_name, email FROM users WHERE email = ? AND password = ?";
->>>>>>> 7e460aca0e23799e05b7146b57ec6aeac2ee6e6c
 
   db.query(sql, [email, password], (err, results) => {
     if (err) return res.status(500).json({ message: "Login failed", error: err });
