@@ -2,7 +2,7 @@ CREATE DATABASE IF NOT EXISTS nairobi_events;
 USE nairobi_events;
 
 -- USERS
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
@@ -12,12 +12,12 @@ CREATE TABLE users (
 );
 
 -- CATEGORIES
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category_name VARCHAR(100) NOT NULL
 );
 
-INSERT INTO categories(category_name)
+INSERT INTO  categories(category_name)
 VALUES
 ('Technology'),
 ('Music'),
@@ -42,7 +42,7 @@ CREATE TABLE events (
 );
 
 -- BOOKINGS
-CREATE TABLE bookings (
+CREATE TABLE IF NOT EXISTS bookings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
     event_id INT,
@@ -54,7 +54,7 @@ CREATE TABLE bookings (
 );
 
 -- REVIEWS
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
     id INT AUTO_INCREMENT PRIMARY KEY,
     rating INT,
     comment TEXT,

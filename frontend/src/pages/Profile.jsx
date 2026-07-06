@@ -139,6 +139,10 @@ function Profile({ loggedInUser, bookings, deleteAccount, setPage }) {
                   KES {totalSpent.toLocaleString()}
                 </span>
               </div>
+              <div className="stat-card" style={{width:'250px', display:'-ms-flexbox'}} >
+                <span className="stat-card-icon">🎊</span>
+                <span className="stat-card-label">Become an Organizer</span>
+              </div>
             </div>
 
             {bookings.length > 0 && (
