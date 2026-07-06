@@ -15,12 +15,34 @@ import Profile from "./pages/Profile";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import OrganizerApplication from "./pages/OrganizerApplication";
+import VerifyEmailNotice from "./pages/VerifyEmailNotice";
 
 function App() {
-  const [page, setPage] = useState(
-    window.location.pathname === "/admin-login" ? "admin-login" : "home"
-  );
+  function getPageFromUrl() {
+  const path = window.location.pathname;
 
+  if (path === "/login") return "login";
+  if (path === "/register") return "register";
+  if (path === "/admin-login") return "admin-login";
+
+  return "home";
+}
+
+const [page, setPageState] = useState(getPageFromUrl());
+  
+function setPage(newPage) {
+  setPageState(newPage);
+
+  if (newPage === "login") {
+    window.history.pushState(null, "", "/login");
+  } else if (newPage === "register") {
+    window.history.pushState(null, "", "/register");
+  } else if (newPage === "admin-login") {
+    window.history.pushState(null, "", "/admin-login");
+  } else {
+    window.history.pushState(null, "", "/");
+  }
+}
   const [events, setEvents] = useState([]);
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [loggedInUser, setLoggedInUser] = useState(null);
@@ -203,8 +225,11 @@ function App() {
         password: "",
       });
 
-      setPage("login");
-      showMessage("Account created successfully. You can now log in.", "success");
+      setPage("verify-email");
+      showMessage(
+  "Account created. Please check your email and verify your account before logging in.",
+  "success"
+);
     } catch (error) {
       console.log("REGISTER ERROR:", error.response?.data || error.message);
       showMessage(error.response?.data?.message || "Registration failed.", "error");
@@ -490,6 +515,9 @@ function App() {
         loggedInUser={loggedInUser}
         handleLogout={handleLogout}
       />
+      {page === "verify-email" && (
+        <VerifyEmailNotice setPage={setPage} />
+         )}
 
       {page === "home" && (
         <Home
