@@ -146,6 +146,99 @@ function App() {
     setSelectedCategory("All");
   }
 
+  async function handleRegister(e) {
+    e.preventDefault();
+
+    try {
+      await API.post("/auth/register", {
+        full_name: registerForm.name,
+        email: registerForm.email,
+        password: registerForm.password,
+      });
+
+      setRegisterForm({
+        name: "",
+        email: "",
+        password: "",
+      });
+
+      setPage("verify-email");
+      showMessage(
+  "Account created. Please check your email and verify your account before logging in.",
+  "success"
+);
+    } catch (error) {
+      console.log("REGISTER ERROR:", error.response?.data || error.message);
+      showMessage(error.response?.data?.message || "Registration failed.", "error");
+    }
+  }
+
+ async function handleLogin(e) {
+  e.preventDefault();
+
+  try {
+    const response = await API.post("/auth/login", {
+      email: loginForm.email,
+      password: loginForm.password,
+    });
+
+    const user = response.data.user;
+
+    const loggedUser = {
+      id: user.id,
+      name: user.full_name,
+      email: user.email,
+      role: user.role,
+      organizer_status: user.organizer_status,
+    };
+
+    const isAdminLoginPage = window.location.pathname === "/admin-login";
+
+    if (isAdminLoginPage && loggedUser.role !== "admin") {
+      showMessage("Only admin can login from this page.", "error");
+      return;
+    }
+
+    if (!isAdminLoginPage && loggedUser.role === "admin") {
+      showMessage("Please use the admin login URL.", "warning");
+      return;
+    }
+
+    setLoggedInUser(loggedUser);
+    localStorage.setItem("loggedInUser", JSON.stringify(loggedUser));
+
+    setLoginForm({
+      email: "",
+      password: "",
+    });
+
+    if (loggedUser.role === "admin") {
+      setPage("admin");
+    } else {
+      setPage("home");
+      fetchUserBookings(loggedUser.id);
+    }
+
+    showMessage(`Welcome, ${loggedUser.name}. Login successful.`, "success");
+  } catch (error) {
+    showMessage("Invalid email or password.", "error");
+  }
+}
+ function handleLogout() {
+  setLoggedInUser(null);
+  localStorage.removeItem("loggedInUser");
+  setSelectedEvent(null);
+  setBookings([]);
+
+  if (window.location.pathname === "/admin-login") {
+    setPage("admin-login");
+  } else {
+    setPage("home");
+  }
+
+  showMessage("You have logged out successfully.", "info");
+}
+
   function openEventDetails(event) {
     setSelectedEvent(event);
     setTicketQuantity(1);
@@ -399,6 +492,9 @@ function App() {
         loggedInUser={loggedInUser}
         handleLogout={handleLogout}
       />
+      {page === "verify-email" && (
+        <VerifyEmailNotice setPage={setPage} />
+         )}
 
       {page === "home" && (
         <Home
