@@ -4,6 +4,8 @@ const router = express.Router();
 const {
   registerUser,
   verifyEmail,
+  verifyOtp,
+  resendVerification,
   loginUser,
   deleteUser,
   applyOrganizer,
@@ -14,6 +16,8 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.delete("/user/:id", deleteUser);
 router.get("/verify/:token", verifyEmail);
+router.post("/verify-otp", verifyOtp);
+router.post("/resend-verification", resendVerification);
 router.put("/apply-organizer/:id", applyOrganizer);
 router.put("/approve-organizer/:id", approveOrganizer);
 

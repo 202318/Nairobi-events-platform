@@ -45,10 +45,6 @@ function Login({ loginForm, setLoginForm, handleLogin, setPage }) {
           <span onClick={() => setPage("register")}>Register here</span>
         </p>
 
-        <p className="auth-footer" style={{ marginTop: 6 }}>
-          Admin?{" "}
-          <span onClick={() => setPage("admin-login")}>Admin login</span>
-        </p>
       </form>
     </section>
   );
