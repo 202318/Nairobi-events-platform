@@ -12,30 +12,46 @@ function AdminDashboard() {
   const [bookings, setBookings] = useState([]);
   const [pendingApplications, setPendingApplications] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => { fetchAllAdminData(); }, []);
 
+  // Fetch each endpoint independently so one failure doesn't wipe everything
   async function fetchAllAdminData() {
-    try {
-      const [statsRes, usersRes, eventsRes, bookingsRes, appsRes, reviewsRes] =
-        await Promise.all([
-          API.get("/admin/stats"),
-          API.get("/admin/users"),
-          API.get("/admin/events"),
-          API.get("/admin/bookings"),
-          API.get("/organizer/pending"),
-          API.get("/reviews"),
-        ]);
-      setStats(statsRes.data);
-      setUsers(usersRes.data);
-      setEvents(eventsRes.data);
-      setBookings(bookingsRes.data);
-      setPendingApplications(appsRes.data);
-      setReviews(reviewsRes.data);
-    } catch (err) {
-      console.error("Failed to load admin data:", err);
-    }
-  }
+  const errs = {};
+
+  try {
+    const res = await API.get("/admin/stats");
+    setStats(res.data);
+  } catch (e) { errs.stats = true; console.error("stats failed:", e.response?.data || e.message); }
+
+  try {
+    const res = await API.get("/admin/users");
+    setUsers(res.data);
+  } catch (e) { errs.users = true; console.error("users failed:", e.response?.data || e.message); }
+
+  try {
+    const res = await API.get("/admin/events");
+    setEvents(res.data);
+  } catch (e) { errs.events = true; console.error("events failed:", e.response?.data || e.message); }
+
+  try {
+    const res = await API.get("/admin/bookings");
+    setBookings(res.data);
+  } catch (e) { errs.bookings = true; console.error("bookings failed:", e.response?.data || e.message); }
+
+  try {
+    const res = await API.get("/organizer/pending");
+    setPendingApplications(res.data);
+  } catch (e) { errs.applications = true; console.error("applications failed:", e.response?.data || e.message); }
+
+  try {
+    const res = await API.get("/reviews");
+    setReviews(res.data);
+  } catch (e) { errs.reviews = true; console.error("reviews failed:", e.response?.data || e.message); }
+
+  setErrors(errs);
+}
 
   async function approveApplication(applicationId) {
     try {
@@ -65,6 +81,20 @@ function AdminDashboard() {
     { key: "reviews",      label: "Reviews",       icon: "⭐" },
   ];
 
+  function ErrorBanner({ section }) {
+    if (!errors[section]) return null;
+    return (
+      <div style={{
+        background: "#fff5f5", border: "1px solid #fecaca", borderRadius: 12,
+        padding: "14px 18px", marginBottom: 20, color: "#b91c1c",
+        fontFamily: "'Manrope', sans-serif", fontSize: 14,
+      }}>
+        ⚠️ Could not load {section} data — the <code>/api/{section}</code> endpoint may be missing or returning an error.
+        Check your backend terminal for details.
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="page-header">
@@ -76,7 +106,6 @@ function AdminDashboard() {
       </div>
 
       <div className="page-body">
-        {/* Tabs */}
         <div className="page-tabs">
           {TABS.map((tab) => (
             <button
@@ -89,11 +118,13 @@ function AdminDashboard() {
                 <span style={{
                   background: "#ff5722", color: "white",
                   fontSize: 10, fontWeight: 800,
-                  padding: "1px 6px", borderRadius: 20,
-                  marginLeft: 6,
+                  padding: "1px 6px", borderRadius: 20, marginLeft: 6,
                 }}>
                   {pendingApplications.length}
                 </span>
+              )}
+              {errors[tab.key] && (
+                <span style={{ marginLeft: 6, fontSize: 12 }}>⚠️</span>
               )}
             </button>
           ))}
@@ -101,41 +132,52 @@ function AdminDashboard() {
 
         {/* STATS */}
         {activeTab === "stats" && (
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-card-icon">👥</span>
-              <span className="stat-card-label">Total Users</span>
-              <span className="stat-card-value">{stats.totalUsers}</span>
+          <>
+            <ErrorBanner section="stats" />
+            <div className="stats-grid">
+              <div className="stat-card">
+                <span className="stat-card-icon">👥</span>
+                <span className="stat-card-label">Total Users</span>
+                <span className="stat-card-value">{stats.totalUsers}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-card-icon">🎪</span>
+                <span className="stat-card-label">Organizers</span>
+                <span className="stat-card-value">{stats.totalOrganizers}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-card-icon">📅</span>
+                <span className="stat-card-label">Total Events</span>
+                <span className="stat-card-value">{stats.totalEvents}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-card-icon">🎟</span>
+                <span className="stat-card-label">Bookings</span>
+                <span className="stat-card-value">{stats.totalBookings}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-card-icon">💰</span>
+                <span className="stat-card-label">Total Revenue</span>
+                <span className="stat-card-value" style={{ fontSize: 24 }}>
+                  KES {Number(stats.totalRevenue || 0).toLocaleString()}
+                </span>
+              </div>
             </div>
-            <div className="stat-card">
-              <span className="stat-card-icon">🎪</span>
-              <span className="stat-card-label">Organizers</span>
-              <span className="stat-card-value">{stats.totalOrganizers}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card-icon">📅</span>
-              <span className="stat-card-label">Total Events</span>
-              <span className="stat-card-value">{stats.totalEvents}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card-icon">🎟</span>
-              <span className="stat-card-label">Bookings</span>
-              <span className="stat-card-value">{stats.totalBookings}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-card-icon">💰</span>
-              <span className="stat-card-label">Total Revenue</span>
-              <span className="stat-card-value" style={{ fontSize: 24 }}>
-                KES {Number(stats.totalRevenue || 0).toLocaleString()}
-              </span>
-            </div>
-          </div>
+          </>
         )}
 
         {/* USERS */}
         {activeTab === "users" && (
           <>
+            <ErrorBanner section="users" />
             <h2 className="section-heading">All Users ({users.length})</h2>
+            {users.length === 0 && !errors.users && (
+              <div className="page-empty">
+                <span className="page-empty-icon">👥</span>
+                <h3>No users yet</h3>
+                <p>Users will appear here once people register.</p>
+              </div>
+            )}
             <div className="data-grid">
               {users.map((user) => (
                 <div className="data-card" key={user.id}>
@@ -167,6 +209,14 @@ function AdminDashboard() {
                     </span>
                   </div>
                   <div className="data-card-row">
+                    <span className="data-card-key">Verified</span>
+                    <span className="data-card-val">
+                      <span className={`badge ${user.is_verified ? "badge-green" : "badge-orange"}`}>
+                        {user.is_verified ? "Yes" : "Pending"}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="data-card-row">
                     <span className="data-card-key">Organizer Status</span>
                     <span className="data-card-val">{user.organizer_status || "—"}</span>
                   </div>
@@ -186,10 +236,9 @@ function AdminDashboard() {
         {/* APPLICATIONS */}
         {activeTab === "applications" && (
           <>
-            <h2 className="section-heading">
-              Pending Applications ({pendingApplications.length})
-            </h2>
-            {pendingApplications.length === 0 ? (
+            <ErrorBanner section="applications" />
+            <h2 className="section-heading">Pending Applications ({pendingApplications.length})</h2>
+            {pendingApplications.length === 0 && !errors.applications ? (
               <div className="page-empty">
                 <span className="page-empty-icon">✅</span>
                 <h3>All clear</h3>
@@ -224,7 +273,7 @@ function AdminDashboard() {
                     </div>
                     <div className="data-card-row">
                       <span className="data-card-key">Expected Price</span>
-                      <span className="data-card-val">KES {Number(app.expected_price).toLocaleString()}</span>
+                      <span className="data-card-val">KES {Number(app.expected_price || 0).toLocaleString()}</span>
                     </div>
                     <div className="data-card-row">
                       <span className="data-card-key">Attendance</span>
@@ -237,9 +286,7 @@ function AdminDashboard() {
                       </div>
                     )}
                     <div className="data-card-actions">
-                      <button onClick={() => approveApplication(app.id)}>
-                        ✓ Approve
-                      </button>
+                      <button onClick={() => approveApplication(app.id)}>✓ Approve</button>
                     </div>
                   </div>
                 ))}
@@ -251,11 +298,12 @@ function AdminDashboard() {
         {/* EVENTS */}
         {activeTab === "events" && (
           <>
+            <ErrorBanner section="events" />
             <h2 className="section-heading">All Events ({events.length})</h2>
             <div className="data-grid">
               {events.map((event) => (
                 <div className="data-card" key={event.id}>
-                  <p className="data-card-title">{event.title}</p>
+                  <p className="data-card-title">{event.title ?? event.name}</p>
                   <div className="data-card-row">
                     <span className="data-card-key">Category</span>
                     <span className="data-card-val">
@@ -268,7 +316,7 @@ function AdminDashboard() {
                   </div>
                   <div className="data-card-row">
                     <span className="data-card-key">Price</span>
-                    <span className="data-card-val">KES {Number(event.price).toLocaleString()}</span>
+                    <span className="data-card-val">KES {Number(event.price || 0).toLocaleString()}</span>
                   </div>
                 </div>
               ))}
@@ -279,7 +327,15 @@ function AdminDashboard() {
         {/* BOOKINGS */}
         {activeTab === "bookings" && (
           <>
+            <ErrorBanner section="bookings" />
             <h2 className="section-heading">All Bookings ({bookings.length})</h2>
+            {bookings.length === 0 && !errors.bookings && (
+              <div className="page-empty">
+                <span className="page-empty-icon">🎟</span>
+                <h3>No bookings yet</h3>
+                <p>Bookings will appear here once users start purchasing tickets.</p>
+              </div>
+            )}
             <div className="data-grid">
               {bookings.map((booking) => (
                 <div className="data-card" key={booking.id}>
@@ -299,7 +355,7 @@ function AdminDashboard() {
                   <div className="data-card-row">
                     <span className="data-card-key">Total</span>
                     <span className="data-card-val" style={{ color: "#7c3aed", fontWeight: 800 }}>
-                      KES {Number(booking.total_amount).toLocaleString()}
+                      KES {Number(booking.total_amount || 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -311,8 +367,9 @@ function AdminDashboard() {
         {/* REVIEWS */}
         {activeTab === "reviews" && (
           <>
+            <ErrorBanner section="reviews" />
             <h2 className="section-heading">All Reviews ({reviews.length})</h2>
-            {reviews.length === 0 ? (
+            {reviews.length === 0 && !errors.reviews ? (
               <div className="page-empty">
                 <span className="page-empty-icon">⭐</span>
                 <h3>No reviews yet</h3>
@@ -335,8 +392,7 @@ function AdminDashboard() {
                       <p style={{
                         fontFamily: "'Manrope', sans-serif",
                         fontSize: 13.5, color: "#4b4560",
-                        marginTop: 12, lineHeight: 1.55,
-                        fontStyle: "italic",
+                        marginTop: 12, lineHeight: 1.55, fontStyle: "italic",
                       }}>
                         "{review.review}"
                       </p>

@@ -9,6 +9,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import AdminLogin from "./components/AdminLogin";
 import EventDetails from "./components/EventDetails";
+import VerifyOTPNotice from "./components/VerifyOTPNotice";
 
 import Home from "./pages/Home";
 import Bookings from "./pages/Bookings";
@@ -18,11 +19,15 @@ import OrganizerApplication from "./pages/OrganizerApplication";
 import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
+
   // ── ROUTING ──
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState(
+  window.location.pathname === "/admin-login" ? "admin-login" : "home"
+);
 
   // ── AUTH ──
   const [loggedInUser, setLoggedInUser] = useState(null);
+  const [registerEmail, setRegisterEmail] = useState(""); // tracks email for OTP screen
 
   const [loginForm, setLoginForm] = useState({
     email: "",
@@ -34,7 +39,6 @@ function App() {
     name: "",
     email: "",
     password: "",
-    role: "user",
   });
 
   // ── EVENTS ──
@@ -109,14 +113,10 @@ function App() {
         name: e.title ?? e.name,
         date: e.event_date ?? e.date,
         location: e.location,
-        price: e.price
-          ? `KES ${Number(e.price).toLocaleString()}`
-          : e.price,
+        price: e.price ? `KES ${Number(e.price).toLocaleString()}` : e.price,
         category: e.category_name ?? e.category ?? "General",
         description: e.description,
-        image:
-          e.image ||
-          "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800",
+        image: e.image || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800",
       }));
       setEvents(mapped);
     } catch {
@@ -146,99 +146,6 @@ function App() {
     setSelectedCategory("All");
   }
 
-  async function handleRegister(e) {
-    e.preventDefault();
-
-    try {
-      await API.post("/auth/register", {
-        full_name: registerForm.name,
-        email: registerForm.email,
-        password: registerForm.password,
-      });
-
-      setRegisterForm({
-        name: "",
-        email: "",
-        password: "",
-      });
-
-      setPage("verify-email");
-      showMessage(
-  "Account created. Please check your email and verify your account before logging in.",
-  "success"
-);
-    } catch (error) {
-      console.log("REGISTER ERROR:", error.response?.data || error.message);
-      showMessage(error.response?.data?.message || "Registration failed.", "error");
-    }
-  }
-
- async function handleLogin(e) {
-  e.preventDefault();
-
-  try {
-    const response = await API.post("/auth/login", {
-      email: loginForm.email,
-      password: loginForm.password,
-    });
-
-    const user = response.data.user;
-
-    const loggedUser = {
-      id: user.id,
-      name: user.full_name,
-      email: user.email,
-      role: user.role,
-      organizer_status: user.organizer_status,
-    };
-
-    const isAdminLoginPage = window.location.pathname === "/admin-login";
-
-    if (isAdminLoginPage && loggedUser.role !== "admin") {
-      showMessage("Only admin can login from this page.", "error");
-      return;
-    }
-
-    if (!isAdminLoginPage && loggedUser.role === "admin") {
-      showMessage("Please use the admin login URL.", "warning");
-      return;
-    }
-
-    setLoggedInUser(loggedUser);
-    localStorage.setItem("loggedInUser", JSON.stringify(loggedUser));
-
-    setLoginForm({
-      email: "",
-      password: "",
-    });
-
-    if (loggedUser.role === "admin") {
-      setPage("admin");
-    } else {
-      setPage("home");
-      fetchUserBookings(loggedUser.id);
-    }
-
-    showMessage(`Welcome, ${loggedUser.name}. Login successful.`, "success");
-  } catch (error) {
-    showMessage("Invalid email or password.", "error");
-  }
-}
- function handleLogout() {
-  setLoggedInUser(null);
-  localStorage.removeItem("loggedInUser");
-  setSelectedEvent(null);
-  setBookings([]);
-
-  if (window.location.pathname === "/admin-login") {
-    setPage("admin-login");
-  } else {
-    setPage("home");
-  }
-
-  showMessage("You have logged out successfully.", "info");
-}
-
   function openEventDetails(event) {
     setSelectedEvent(event);
     setTicketQuantity(1);
@@ -256,13 +163,23 @@ function App() {
         full_name: registerForm.name,
         email: registerForm.email,
         password: registerForm.password,
-        role: registerForm.role,
       });
-      setRegisterForm({ name: "", email: "", password: "", role: "user" });
-      setPage("login");
-      showMessage("Account created — you can now log in.", "success");
-    } catch {
-      showMessage("Registration failed. Email may already be in use.", "error");
+
+      // Save email so OTP screen can use it
+      setRegisterEmail(registerForm.email);
+      setRegisterForm({ name: "", email: "", password: "" });
+
+      // Go to OTP verification screen
+      setPage("verify-email");
+      showMessage(
+        "Account created — check your email for your 6-digit verification code.",
+        "success"
+      );
+    } catch (error) {
+      showMessage(
+        error.response?.data?.message || "Registration failed. Email may already be in use.",
+        "error"
+      );
     }
   }
 
@@ -272,7 +189,6 @@ function App() {
       const response = await API.post("/auth/login", {
         email: loginForm.email,
         password: loginForm.password,
-        role: loginForm.role,
       });
 
       const user = response.data.user;
@@ -284,11 +200,23 @@ function App() {
         organizer_status: user.organizer_status ?? "none",
       };
 
+      // Block non-admins from admin login page
+      if (page === "admin-login" && loggedUser.role !== "admin") {
+        showMessage("This login is for admins only.", "error");
+        return;
+      }
+
+      // Block admins from regular login page
+      if (page === "login" && loggedUser.role === "admin") {
+        showMessage("Admins must use the admin login page.", "warning");
+        return;
+      }
+
       setLoggedInUser(loggedUser);
       setLoginForm({ email: "", password: "", role: "user" });
       showMessage(`Welcome back, ${loggedUser.name}!`, "success");
 
-      // ── ROUTE BY ROLE ──
+      // Route by role
       if (loggedUser.role === "admin") {
         setPage("admin");
       } else if (loggedUser.role === "organizer") {
@@ -298,8 +226,11 @@ function App() {
         await fetchUserBookings(loggedUser.id);
         setPage("home");
       }
-    } catch {
-      showMessage("Invalid email, password or role.", "error");
+    } catch (error) {
+      showMessage(
+        error.response?.data?.message || "Invalid email or password.",
+        "error"
+      );
     }
   }
 
@@ -323,9 +254,6 @@ function App() {
     }
   }
 
-  // ─────────────────────────────────────────
-  // BOOKINGS
-  // ─────────────────────────────────────────
 
   async function fetchUserBookings(userId) {
     try {
@@ -492,23 +420,22 @@ function App() {
         loggedInUser={loggedInUser}
         handleLogout={handleLogout}
       />
-      {page === "verify-email" && (
-        <VerifyEmailNotice setPage={setPage} />
-         )}
 
       {page === "home" && (
-        <Home
-          searchInput={searchInput}
-          setSearchInput={setSearchInput}
-          handleSearch={handleSearch}
-          clearSearch={clearSearch}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          filteredEvents={filteredEvents}
-          openEventDetails={openEventDetails}
-          setPage={setPage}
-        />
-      )}
+  <Home
+    searchInput={searchInput}
+    setSearchInput={setSearchInput}
+    handleSearch={handleSearch}
+    clearSearch={clearSearch}
+    selectedCategory={selectedCategory}
+    setSelectedCategory={setSelectedCategory}
+    filteredEvents={filteredEvents}
+    openEventDetails={openEventDetails}
+    setPage={setPage}
+    loggedInUser={loggedInUser}
+    showMessage={showMessage}
+  />
+)}
 
       {page === "details" && selectedEvent && (
         <EventDetails
@@ -563,6 +490,15 @@ function App() {
 
       {page === "admin" && loggedInUser?.role === "admin" && (
         <AdminDashboard />
+      )}
+
+      {/* OTP verification screen — shown after registration */}
+      {page === "verify-email" && (
+        <VerifyOTPNotice
+          setPage={setPage}
+          email={registerEmail}
+          showMessage={showMessage}
+        />
       )}
 
       {page === "login" && (

@@ -1,70 +1,75 @@
-/*import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import { useEffect, useState } from "react";
-import L from "leaflet";
-
-delete L.Icon.Default.prototype._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+import { useEffect, useRef, useState } from "react";
 
 function EventMap({ location }) {
-  const [position, setPosition] = useState(null);
+  const mapRef = useRef(null);
+  const [mapError, setMapError] = useState("");
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
-    async function geocode() {
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            location + ", Kenya"
-          )}`
-        );
+    if (!location || !mapRef.current) return;
 
-        const data = await response.json();
+    const initMap = () => {
+      if (!window.google?.maps || !mapRef.current) return;
 
-        if (data.length > 0) {
-          setPosition([
-            parseFloat(data[0].lat),
-            parseFloat(data[0].lon),
-          ]);
+      const geocoder = new window.google.maps.Geocoder();
+
+      geocoder.geocode({ address: `${location}, Nairobi, Kenya` }, (results, status) => {
+        if (status !== "OK" || !results[0]) {
+          setMapError("Unable to load the map for this location.");
+          return;
         }
-      } catch (err) {
-        console.error(err);
-      }
+
+        const coords = results[0].geometry.location;
+        const map = new window.google.maps.Map(mapRef.current, {
+          center: coords,
+          zoom: 15,
+        });
+
+        new window.google.maps.Marker({ position: coords, map });
+      });
+    };
+
+    if (!apiKey) {
+      setMapError("Google Maps is not configured for this app.");
+      return;
     }
 
-    geocode();
-  }, [location]);
+    if (window.google?.maps) {
+      initMap();
+      return;
+    }
 
-  if (!position) {
-    return <p>Loading map...</p>;
-  }
+    const existingScript = document.querySelector('script[data-google-maps="true"]');
+
+    if (existingScript) {
+      existingScript.addEventListener("load", initMap, { once: true });
+      existingScript.addEventListener("error", () => setMapError("Unable to load Google Maps."), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+    script.async = true;
+    script.defer = true;
+    script.setAttribute("data-google-maps", "true");
+    script.onload = initMap;
+    script.onerror = () => setMapError("Unable to load Google Maps.");
+    document.head.appendChild(script);
+  }, [location, apiKey]);
 
   return (
-    <MapContainer
-      center={position}
-      zoom={15}
-      style={{
-        height: "250px",
-        width: "100%",
-        borderRadius: "12px",
-        marginTop: "15px",
-      }}
-    >
-      <TileLayer
-        attribution="© OpenStreetMap contributors"
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-
-      <Marker position={position}>
-        <Popup>{location}</Popup>
-      </Marker>
-    </MapContainer>
+    <div style={{ width: "100%", marginTop: "16px" }}>
+      {mapError ? (
+        <p style={{ padding: "12px", borderRadius: "10px", background: "#f3f4f6" }}>
+          {mapError}
+        </p>
+      ) : (
+        <div
+          ref={mapRef}
+          style={{ width: "100%", height: "220px", borderRadius: "14px" }}
+        />
+      )}
+    </div>
   );
 }
 

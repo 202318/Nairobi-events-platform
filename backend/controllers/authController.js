@@ -2,6 +2,10 @@ const db = require("../config/db");
 const crypto = require("crypto");
 const transporter = require("../config/email");
 
+function generateOtp() {
+  return String(crypto.randomInt(100000, 1000000)).padStart(6, "0");
+}
+
 function registerUser(req, res) {
   const { full_name, email, password } = req.body;
 
@@ -9,20 +13,19 @@ function registerUser(req, res) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-<<<<<<< HEAD
-  const verificationToken = crypto.randomBytes(32).toString("hex");
-=======
-  const sql =
-    "INSERT INTO users (full_name, email, password) VALUES (?, ?, ?);";
->>>>>>> 7e460aca0e23799e05b7146b57ec6aeac2ee6e6c
+  const verificationCode = generateOtp();
+  const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
 
   const sql = `
     INSERT INTO users 
-    (full_name, email, password, role, organizer_status, is_verified, verification_token) 
-    VALUES (?, ?, ?, 'user', 'none', false, ?)
+    (full_name, email, password, role, organizer_status, is_verified, otp_code, otp_expires_at) 
+    VALUES (?, ?, ?, 'user', 'none', false, ?, ?)
   `;
 
-  db.query(sql, [full_name, email, password, verificationToken], async (err, result) => {
+  db.query(sql, [full_name, email, password, verificationCode, otpExpiresAt], async (err, result) => {
     if (err) {
       return res.status(500).json({
         message: "Registration failed. Email may already exist.",
@@ -30,25 +33,22 @@ function registerUser(req, res) {
       });
     }
 
-    const verificationLink = `http://localhost:5000/api/auth/verify/${verificationToken}`;
-
     try {
       await transporter.sendMail({
         from: `"Nairobi Events" <${process.env.EMAIL_USER || "YOUR_GMAIL@gmail.com"}>`,
         to: email,
-        subject: "Verify your Nairobi Events account",
+        subject: "Your Nairobi Events verification code",
         html: `
           <h2>Welcome to Nairobi Events</h2>
           <p>Hello ${full_name},</p>
-          <p>Please verify your account by clicking the link below:</p>
-          <a href="${verificationLink}">Verify Account</a>
-          <p>If the button does not work, copy this link:</p>
-          <p>${verificationLink}</p>
+          <p>Your verification code is:</p>
+          <h1>${verificationCode}</h1>
+          <p>Enter this code in the app to activate your account.</p>
         `,
       });
 
       res.status(201).json({
-        message: "Account created. Please check your email to verify your account.",
+        message: "Account created. Please check your email for your verification code.",
         userId: result.insertId,
       });
     } catch (emailError) {
@@ -65,8 +65,8 @@ function verifyEmail(req, res) {
 
   const sql = `
     UPDATE users
-    SET is_verified = true, verification_token = NULL
-    WHERE verification_token = ?
+    SET is_verified = true, otp_code = NULL, otp_expires_at = NULL
+    WHERE otp_code = ? AND otp_expires_at > UTC_TIMESTAMP()
   `;
 
   db.query(sql, [token], (err, result) => {
@@ -77,60 +77,76 @@ function verifyEmail(req, res) {
     if (result.affectedRows === 0) {
       return res.status(400).send("Invalid or expired verification link.");
     }
-   res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<title>Email Verified</title>
-
-<style>
-body{
-  font-family:Arial;
-  background:#f5f5f5;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
+    res.send("Account verified successfully. Please return to the app and log in.");
+  });
 }
 
-.card{
-  background:white;
-  padding:40px;
-  border-radius:15px;
-  text-align:center;
-  box-shadow:0 10px 30px rgba(0,0,0,.15);
+function verifyOtp(req, res) {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ message: "Email and OTP are required" });
+  }
+
+  const sql = `
+    UPDATE users
+    SET is_verified = true, otp_code = NULL, otp_expires_at = NULL
+    WHERE email = ? AND otp_code = ? AND otp_expires_at > UTC_TIMESTAMP()
+  `;
+
+  db.query(sql, [email, otp], (err, result) => {
+    if (err) return res.status(500).json({ message: "Verification failed", error: err });
+    if (result.affectedRows === 0) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+    res.json({ message: "Account verified successfully" });
+  });
 }
 
-a{
-  display:inline-block;
-  margin-top:20px;
-  background:#7c3aed;
-  color:white;
-  padding:12px 25px;
-  border-radius:8px;
-  text-decoration:none;
-}
-</style>
-</head>
+function resendVerification(req, res) {
+  const { email } = req.body;
 
-<body>
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
 
-<div class="card">
-<h1>✅ Email Verified</h1>
+  const verificationCode = generateOtp();
+  const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
 
-<p>Your account has been verified successfully.</p>
+  const sql = `
+    UPDATE users
+    SET otp_code = ?, otp_expires_at = ?
+    WHERE email = ?
+  `;
 
-<p>You can now login to Nairobi Events.</p>
+  db.query(sql, [verificationCode, otpExpiresAt, email], async (err, result) => {
+    if (err) {
+      return res.status(500).json({ message: "Failed to resend verification code", error: err });
+    }
 
-<a href="http://localhost:5173">
-Return to Nairobi Events
-</a>
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-</div>
+    try {
+      await transporter.sendMail({
+        from: `"Nairobi Events" <${process.env.EMAIL_USER || "YOUR_GMAIL@gmail.com"}>`,
+        to: email,
+        subject: "Your Nairobi Events verification code",
+        html: `
+          <h2>New verification code</h2>
+          <p>Your new verification code is:</p>
+          <h1>${verificationCode}</h1>
+          <p>Enter this code in the app to activate your account.</p>
+        `,
+      });
 
-</body>
-</html>
-`);
+      res.json({ message: "Verification code resent successfully" });
+    } catch (emailError) {
+      res.status(500).json({ message: "Failed to send verification code", error: emailError });
+    }
   });
 }
 
@@ -141,16 +157,11 @@ function loginUser(req, res) {
     return res.status(400).json({ message: "Email and password are required" });
   }
 
-<<<<<<< HEAD
   const sql = `
     SELECT id, full_name, email, role, organizer_status, is_verified
     FROM users
     WHERE email = ? AND password = ?
   `;
-=======
-  const sql =
-    "SELECT id, full_name, email FROM users WHERE email = ? AND password = ?";
->>>>>>> 7e460aca0e23799e05b7146b57ec6aeac2ee6e6c
 
   db.query(sql, [email, password], (err, results) => {
     if (err) return res.status(500).json({ message: "Login failed", error: err });
@@ -223,7 +234,7 @@ function approveOrganizer(req, res) {
   const { id } = req.params;
 
   const sql =
-    "UPDATE users SET organizer_status = 'approved' WHERE id = ? AND role != 'admin'";
+    "UPDATE users SET role = 'organizer', organizer_status = 'approved' WHERE id = ? AND role != 'admin'";
 
   db.query(sql, [id], (err, result) => {
     if (err) return res.status(500).json({ message: "Approval failed", error: err });
@@ -239,6 +250,8 @@ function approveOrganizer(req, res) {
 module.exports = {
   registerUser,
   verifyEmail,
+  verifyOtp,
+  resendVerification,
   loginUser,
   deleteUser,
   applyOrganizer,
