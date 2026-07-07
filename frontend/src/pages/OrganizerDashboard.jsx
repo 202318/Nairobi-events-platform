@@ -1,3 +1,5 @@
+import LocationPicker from "../components/LocationPicker";
+
 function OrganizerDashboard({
   organizerEvents,
   newEvent,
@@ -101,13 +103,16 @@ function OrganizerDashboard({
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Location</label>
-              <input
-                className="form-input"
-                type="text"
-                placeholder="e.g. Sarit Centre, Westlands"
-                value={activeEvent.location}
-                onChange={(e) => updateField("location", e.target.value)}
-              />
+              <LocationPicker
+    value={activeEvent.location}
+    latitude={activeEvent.latitude}
+    longitude={activeEvent.longitude}
+    onSelect={(place) => {
+        updateField("location", place.location);
+        updateField("latitude", place.latitude);
+        updateField("longitude", place.longitude);
+    }}
+/>
             </div>
             <div className="form-group">
               <label className="form-label">Ticket Price (KES)</label>
