@@ -1,63 +1,78 @@
 const db = require("../config/db");
 const crypto = require("crypto");
 const transporter = require("../config/email");
+const bcrypt = require("bcrypt");
 
 function generateOtp() {
   return String(crypto.randomInt(100000, 1000000)).padStart(6, "0");
 }
 
-function registerUser(req, res) {
+async function registerUser(req, res) {
   const { full_name, email, password } = req.body;
 
   if (!full_name || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  const verificationCode = generateOtp();
-  const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000)
-    .toISOString()
-    .slice(0, 19)
-    .replace("T", " ");
+  try {
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-  const sql = `
-    INSERT INTO users 
-    (full_name, email, password, role, organizer_status, is_verified, otp_code, otp_expires_at) 
-    VALUES (?, ?, ?, 'user', 'none', false, ?, ?)
-  `;
+    const verificationCode = generateOtp();
+    const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000)
+      .toISOString()
+      .slice(0, 19)
+      .replace("T", " ");
 
-  db.query(sql, [full_name, email, password, verificationCode, otpExpiresAt], async (err, result) => {
-    if (err) {
-      return res.status(500).json({
-        message: "Registration failed. Email may already exist.",
-        error: err,
-      });
-    }
+    const sql = `
+      INSERT INTO users
+      (full_name, email, password, role, organizer_status, is_verified, otp_code, otp_expires_at)
+      VALUES (?, ?, ?, 'user', 'none', false, ?, ?)
+    `;
 
-    try {
-      await transporter.sendMail({
-        from: `"Nairobi Events" <${process.env.EMAIL_USER || "YOUR_GMAIL@gmail.com"}>`,
-        to: email,
-        subject: "Your Nairobi Events verification code",
-        html: `
-          <h2>Welcome to Nairobi Events</h2>
-          <p>Hello ${full_name},</p>
-          <p>Your verification code is:</p>
-          <h1>${verificationCode}</h1>
-          <p>Enter this code in the app to activate your account.</p>
-        `,
-      });
+    db.query(
+      sql,
+      [full_name, email, hashedPassword, verificationCode, otpExpiresAt],
+      async (err, result) => {
+        if (err) {
+          return res.status(500).json({
+            message: "Registration failed. Email may already exist.",
+            error: err,
+          });
+        }
 
-      res.status(201).json({
-        message: "Account created. Please check your email for your verification code.",
-        userId: result.insertId,
-      });
-    } catch (emailError) {
-      res.status(500).json({
-        message: "Account created but verification email failed to send.",
-        error: emailError,
-      });
-    }
-  });
+        try {
+          await transporter.sendMail({
+            from: `"Nairobi Events" <${process.env.EMAIL_USER || "YOUR_GMAIL@gmail.com"}>`,
+            to: email,
+            subject: "Your Nairobi Events verification code",
+            html: `
+              <h2>Welcome to Nairobi Events</h2>
+              <p>Hello ${full_name},</p>
+              <p>Your verification code is:</p>
+              <h1>${verificationCode}</h1>
+              <p>Enter this code in the app to activate your account.</p>
+            `,
+          });
+
+          return res.status(201).json({
+            message: "Account created. Please check your email for your verification code.",
+            userId: result.insertId,
+          });
+        } catch (emailError) {
+          return res.status(500).json({
+            message: "Account created but verification email failed to send.",
+            error: emailError,
+          });
+        }
+      }
+    );
+  } catch (hashError) {
+    return res.status(500).json({
+      message: "Failed to hash password.",
+      error: hashError,
+    });
+  }
 }
 
 function verifyEmail(req, res) {
@@ -150,33 +165,54 @@ function resendVerification(req, res) {
   });
 }
 
-function loginUser(req, res) {
+async function loginUser(req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+    return res.status(400).json({
+      message: "Email and password are required",
+    });
   }
 
   const sql = `
-    SELECT id, full_name, email, role, organizer_status, is_verified
+    SELECT id, full_name, email, password, role, organizer_status, is_verified
     FROM users
-    WHERE email = ? AND password = ?
+    WHERE email = ?
   `;
 
-  db.query(sql, [email, password], (err, results) => {
-    if (err) return res.status(500).json({ message: "Login failed", error: err });
+  db.query(sql, [email], async (err, results) => {
+    if (err) {
+      return res.status(500).json({
+        message: "Login failed",
+        error: err,
+      });
+    }
 
     if (results.length === 0) {
-      return res.status(401).json({ message: "Invalid login details" });
+      return res.status(401).json({
+        message: "Invalid login details",
+      });
     }
 
     const user = results[0];
+
+    // Compare entered password with hashed password
+    const passwordMatches = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatches) {
+      return res.status(401).json({
+        message: "Invalid login details",
+      });
+    }
 
     if (!user.is_verified && user.role !== "admin") {
       return res.status(403).json({
         message: "Please verify your email before logging in.",
       });
     }
+
+    // Don't send the hashed password back to the frontend
+    delete user.password;
 
     res.json({
       message: "Login successful",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import EventMap from "./EventMap";
 import API from "../api";
 
 function EventDetails({
@@ -17,6 +18,7 @@ function EventDetails({
   const [paying, setPaying] = useState(false);
 
   useEffect(() => {
+    console.log(selectedEvent);
     fetchReviews();
   }, [selectedEvent.id]);
 
@@ -71,6 +73,7 @@ function EventDetails({
   }
 
   const total = getNumericPrice(selectedEvent.price) * ticketQuantity;
+  console.log(selectedEvent);
 
   return (
     <div className="event-details">
@@ -130,6 +133,14 @@ function EventDetails({
             {selectedEvent.description && (
               <p className="details-description">{selectedEvent.description}</p>
             )}
+          </div>
+
+          <div className="details-map-card">
+            <EventMap
+  latitude={selectedEvent.latitude}
+  longitude={selectedEvent.longitude}
+  location={selectedEvent.location}
+/>
           </div>
 
           {/* Reviews */}
@@ -258,6 +269,7 @@ function EventDetails({
       </div>
     </div>
   );
+  
 }
 
 export default EventDetails;

@@ -18,6 +18,7 @@ import OrganizerDashboard from "./pages/OrganizerDashboard";
 import OrganizerApplication from "./pages/OrganizerApplication";
 import AdminDashboard from "./pages/AdminDashboard";
 
+
 function App() {
 
   // ── ROUTING ──
@@ -113,12 +114,15 @@ function App() {
         name: e.title ?? e.name,
         date: e.event_date ?? e.date,
         location: e.location,
+        latitude: Number(e.latitude),
+        longitude: Number(e.longitude),
         price: e.price ? `KES ${Number(e.price).toLocaleString()}` : e.price,
         category: e.category_name ?? e.category ?? "General",
         description: e.description,
         image: e.image || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800",
       }));
       setEvents(mapped);
+      console.log(mapped);
     } catch {
       showMessage("Failed to load events.", "error");
     }
@@ -308,6 +312,8 @@ function App() {
         name: e.title ?? e.name,
         date: e.event_date ?? e.date,
         location: e.location,
+        latitude: Number(e.latitude),
+        longitude: Number(e.longitude),
         price: e.price,
         category: e.category_name ?? e.category ?? "General",
         description: e.description,

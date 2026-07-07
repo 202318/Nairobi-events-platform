@@ -8,6 +8,8 @@ function getAllEvents(req, res) {
       events.description,
       events.event_date AS date,
       events.location,
+      events.longitude,
+      events.latitude,
       events.price,
       events.image,
       events.tickets_available,
@@ -24,6 +26,7 @@ function getAllEvents(req, res) {
       return res.status(500).json({ message: "Failed to fetch events", error: err });
     }
 
+    console.log("Fetched events:", results); // Log the fetched events for debugging
     res.json(results);
   });
 }
@@ -38,6 +41,8 @@ function getOrganizerEvents(req, res) {
       events.description,
       events.event_date AS date,
       events.location,
+      events.longitude,
+      events.latitude,
       events.price,
       categories.category_name AS category
     FROM events
@@ -60,6 +65,8 @@ function createEvent(req, res) {
     description,
     event_date,
     location,
+    longitude,
+    latitude,
     price,
     image,
     tickets_available,
@@ -73,8 +80,8 @@ function createEvent(req, res) {
 
   const sql = `
     INSERT INTO events 
-    (title, description, event_date, location, price, image, tickets_available, category_id, organizer_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (title, description, event_date, location, longitude, latitude, price, image, tickets_available, category_id, organizer_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(
@@ -84,6 +91,8 @@ function createEvent(req, res) {
       description,
       event_date,
       location,
+      longitude,
+      latitude,
       price,
       image || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800",
       tickets_available || 100,
@@ -125,19 +134,21 @@ function updateEvent(req, res) {
     description,
     event_date,
     location,
+    longitude,
+    latitude,
     price,
     category_id,
   } = req.body;
 
   const sql = `
     UPDATE events
-    SET title = ?, description = ?, event_date = ?, location = ?, price = ?, category_id = ?
+    SET title = ?, description = ?, event_date = ?, location = ?, longitude = ?, latitude = ?, price = ?, category_id = ?
     WHERE id = ?
   `;
 
   db.query(
     sql,
-    [title, description, event_date, location, price, category_id, id],
+    [title, description, event_date, location, longitude, latitude, price, category_id, id],
     (err) => {
       if (err) {
         return res.status(500).json({
