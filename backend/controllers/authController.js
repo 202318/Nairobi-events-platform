@@ -14,15 +14,18 @@ async function registerUser(req, res) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
+
   try {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
+
 
     const verificationCode = generateOtp();
     const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000)
       .toISOString()
       .slice(0, 19)
       .replace("T", " ");
+
 
     const sql = `
       INSERT INTO users
@@ -73,7 +76,6 @@ async function registerUser(req, res) {
       error: hashError,
     });
   }
-}
 
 function verifyEmail(req, res) {
   const { token } = req.params;
@@ -85,19 +87,27 @@ function verifyEmail(req, res) {
   `;
 
   db.query(sql, [token], (err, result) => {
-    if (err) {
-      return res.status(500).send("Verification failed.");
-    }
+    if (err) return res.status(500).send("Verification failed.");
 
     if (result.affectedRows === 0) {
-      return res.status(400).send("Invalid or expired verification link.");
+      return res.status(400).send("Invalid or expired verification code.");
     }
-    res.send("Account verified successfully. Please return to the app and log in.");
+
+    res.send(`
+      <div style="font-family: Arial; text-align: center; padding: 60px;">
+        <h1 style="color:#16a34a;">Email Verified Successfully ✅</h1>
+        <p>Your Nairobi Events account has been verified.</p>
+        <a href="http://localhost:5173/login" style="display:inline-block;margin-top:20px;background:#7c3aed;color:white;padding:12px 25px;border-radius:8px;text-decoration:none;">
+          Login Now
+        </a>
+      </div>
+    `);
   });
 }
 
 function verifyOtp(req, res) {
   const { email, otp } = req.body;
+
   if (!email || !otp) {
     return res.status(400).json({ message: "Email and OTP are required" });
   }
@@ -110,9 +120,11 @@ function verifyOtp(req, res) {
 
   db.query(sql, [email, otp], (err, result) => {
     if (err) return res.status(500).json({ message: "Verification failed", error: err });
+
     if (result.affectedRows === 0) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
+
     res.json({ message: "Account verified successfully" });
   });
 }
@@ -125,7 +137,7 @@ function resendVerification(req, res) {
   }
 
   const verificationCode = generateOtp();
-  const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000)
+  const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000)
     .toISOString()
     .slice(0, 19)
     .replace("T", " ");
@@ -133,16 +145,21 @@ function resendVerification(req, res) {
   const sql = `
     UPDATE users
     SET otp_code = ?, otp_expires_at = ?
-    WHERE email = ?
+    WHERE email = ? AND is_verified = false
   `;
 
   db.query(sql, [verificationCode, otpExpiresAt, email], async (err, result) => {
     if (err) {
-      return res.status(500).json({ message: "Failed to resend verification code", error: err });
+      return res.status(500).json({
+        message: "Failed to resend verification code",
+        error: err,
+      });
     }
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found or account already verified",
+      });
     }
 
     try {
@@ -155,12 +172,16 @@ function resendVerification(req, res) {
           <p>Your new verification code is:</p>
           <h1>${verificationCode}</h1>
           <p>Enter this code in the app to activate your account.</p>
+          <p>This code expires in 10 minutes.</p>
         `,
       });
 
       res.json({ message: "Verification code resent successfully" });
     } catch (emailError) {
-      res.status(500).json({ message: "Failed to send verification code", error: emailError });
+      res.status(500).json({
+        message: "Failed to send verification code",
+        error: emailError,
+      });
     }
   });
 }
@@ -229,16 +250,33 @@ function deleteUser(req, res) {
   const deleteUserSql = "DELETE FROM users WHERE id = ? AND role != 'admin'";
 
   db.query(deleteBookingsSql, [id], (bookingErr) => {
-    if (bookingErr) return res.status(500).json({ message: "Failed to delete user bookings", error: bookingErr });
+    if (bookingErr) {
+      return res.status(500).json({
+        message: "Failed to delete user bookings",
+        error: bookingErr,
+      });
+    }
 
     db.query(deleteApplicationsSql, [id], (applicationErr) => {
-      if (applicationErr) return res.status(500).json({ message: "Failed to delete organizer applications", error: applicationErr });
+      if (applicationErr) {
+        return res.status(500).json({
+          message: "Failed to delete organizer applications",
+          error: applicationErr,
+        });
+      }
 
       db.query(deleteUserSql, [id], (userErr, result) => {
-        if (userErr) return res.status(500).json({ message: "Failed to delete account", error: userErr });
+        if (userErr) {
+          return res.status(500).json({
+            message: "Failed to delete account",
+            error: userErr,
+          });
+        }
 
         if (result.affectedRows === 0) {
-          return res.status(403).json({ message: "Admin account cannot be deleted" });
+          return res.status(403).json({
+            message: "Admin account cannot be deleted",
+          });
         }
 
         res.json({ message: "Account deleted successfully" });
@@ -293,3 +331,4 @@ module.exports = {
   applyOrganizer,
   approveOrganizer,
 };
+}
